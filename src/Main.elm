@@ -167,6 +167,7 @@ type Msg
     | FocusedMateriaSabadoUpdate { changeType : TimeRangeChangeType, newStr : String }
     | FocusedMateriaDomingoUpdate { changeType : TimeRangeChangeType, newStr : String }
     | ListaMateriasNewMateria
+    | ListaMateriasSelectMateria String
 
 
 
@@ -290,6 +291,9 @@ update msg model =
 
             ListaMateriasNewMateria ->
                 Debug.todo "branch 'ListaMateriasNewMateria' not implemented"
+
+            ListaMateriasSelectMateria _ ->
+                Debug.todo "branch 'ListaMateriasSelectMateria _' not implemented"
 
 
 
@@ -434,6 +438,21 @@ botonNuevaMateria =
         }
 
 
+botonMateria : String -> Element Msg
+botonMateria materiaNameStr =
+    Input.button
+        [ Element.width Element.fill
+        , Border.rounded 15
+        , Element.padding 10
+        , Background.color <| Element.rgb255 248 249 255
+        , Element.spacing 15
+        , Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
+        ]
+        { onPress = Just <| ListaMateriasSelectMateria materiaNameStr
+        , label = Element.row [] [ text materiaNameStr ]
+        }
+
+
 listaDeMaterias : Model -> Element Msg
 listaDeMaterias m =
     Element.column
@@ -441,7 +460,7 @@ listaDeMaterias m =
         , Element.spacing 15
         , Element.alignTop
         ]
-        [ el [ Font.bold ] (text "Materias")
+        [ el [ Font.bold, Font.size 22 ] (text "Materias")
         , Element.column
             [ Element.width <| Element.fill
             , Border.rounded 15
@@ -450,14 +469,7 @@ listaDeMaterias m =
             , Element.spacing 15
             ]
             [ botonNuevaMateria
-            , el
-                [ Element.width Element.fill
-                , Border.rounded 15
-                , Element.padding 15
-                , Background.color <| Element.rgb255 248 249 255
-                , Element.spacing 15
-                ]
-                (text m.focusedMateria.materiaName)
+            , botonMateria m.focusedMateria.materiaName
             ]
 
         -- TODO change to a list buttons of materias
