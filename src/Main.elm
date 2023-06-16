@@ -12,7 +12,7 @@ import Html exposing (Html)
 import Html.Attributes
 import Model exposing (..)
 import Msg exposing (Msg(..), TimeRangeChangeType(..))
-import Tuple exposing (..)
+import Tuple exposing (first, mapFirst)
 import TypedTime as T exposing (TypedTime)
 
 
