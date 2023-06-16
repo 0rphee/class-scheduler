@@ -303,23 +303,23 @@ update msg model =
 view : Model -> Html Msg
 view m =
     Element.layout
-        []
+        [ Font.family
+            [ Font.typeface "Arial Rounded MT Bold"
+            , Font.sansSerif
+            ]
+        , Font.size 19
+        , Background.color <| Element.rgb255 245 246 250
+        ]
         (appUI m)
 
 
 appUI : Model -> Element Msg
 appUI m =
     Element.column
-        [ Font.family
-            [ Font.typeface "Arial Rounded MT Bold"
-            , Font.sansSerif
-            ]
-        , Font.size 19
-        , Element.padding 30
+        [ Element.padding 30
         , Element.spacing 10
         , Element.width fill
         , Element.height fill
-        , Background.color <| Element.rgb255 245 246 250
         ]
         [ title
         , el [] Element.none
@@ -365,8 +365,7 @@ dayInputEl msgConstructor horario dayStr =
         , row
             [ Border.rounded 15
             , Border.width 0
-            , Background.color <| Element.rgb255 248 249 255
-            , Element.width <| Element.px 20
+            , Element.width <| Element.minimum 20 Element.fill
             , Element.spacing 40
             , Font.size 17
             ]
@@ -405,6 +404,12 @@ vistaDeMateria m =
                 , text = m.focusedMateria.materiaName -- : String
                 , placeholder = Just (Input.placeholder [] <| text "nombre de materia")
                 , label = Input.labelLeft [ Font.bold, Font.size 30 ] (text "Materia") -- : Label Msg
+                }
+            , materiaTextInfoInput
+                { onChange = FocusedMateriaIdUpdate
+                , text = m.focusedMateria.materiaId
+                , placeholder = Just (Input.placeholder [] <| text "12309")
+                , label = Input.labelAbove [ Font.extraLight, Font.size 22 ] (text "ID de la clase")
                 }
             , materiaTextInfoInput
                 { onChange = FocusedMateriaProfUpdate
