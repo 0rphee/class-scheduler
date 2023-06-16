@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser
 import Debug
-import Dict exposing (Dict)
+import Dict
 import Element exposing (Element, column, el, fill, px, row, text, width)
 import Element.Background as Background
 import Element.Border as Border
@@ -10,6 +10,8 @@ import Element.Font as Font
 import Element.Input as Input
 import Html exposing (Html)
 import Html.Attributes
+import Model exposing (..)
+import Msg exposing (Msg(..), TimeRangeChangeType(..))
 import Tuple exposing (..)
 import TypedTime as T exposing (TypedTime)
 
@@ -47,169 +49,7 @@ main =
 
 
 
--- MODEL
-
-
-type alias Warnings =
-    { emptyNameWhenClickingNewMateria : Bool
-    , alreadyExistingMateriaRename : Maybe String
-    }
-
-
-emptyWarnings : Warnings
-emptyWarnings =
-    { emptyNameWhenClickingNewMateria = False
-    , alreadyExistingMateriaRename = Nothing
-    }
-
-
-setEmptyNameWhenClickingNewMateria : Bool -> Warnings -> Warnings
-setEmptyNameWhenClickingNewMateria b warning =
-    { warning | emptyNameWhenClickingNewMateria = b }
-
-
-setAlreadyExistingMateriaRename : Maybe String -> Warnings -> Warnings
-setAlreadyExistingMateriaRename b warning =
-    { warning | alreadyExistingMateriaRename = b }
-
-
-type alias Model =
-    { focusedMateriaName : String
-    , focusedMateria : InstanciaMateria
-    , lMaterias : Dict String InstanciaMateria
-    , warnings : Warnings
-    }
-
-
-setModelMaterias : InstanciaMateria -> Model -> Model
-setModelMaterias mat model =
-    let
-        newModel =
-            { model | focusedMateria = mat }
-    in
-    { newModel | lMaterias = Dict.insert newModel.focusedMateriaName newModel.focusedMateria newModel.lMaterias }
-
-
-
--- Instancia Materia "POO con iván", "POO con roberto", "PA con sanchez"
-
-
-type alias HorarioClase =
-    { inicio : ( String, Maybe TypedTime )
-    , final : ( String, Maybe TypedTime )
-    }
-
-
-emptyHorario : HorarioClase
-emptyHorario =
-    { inicio = ( "", Nothing )
-    , final = ( "", Nothing )
-    }
-
-
-type alias InstanciaMateria =
-    { materiaId : String
-    , materiaProf : String
-    , materiaLunes : HorarioClase
-    , materiaMartes : HorarioClase
-    , materiaMiercoles : HorarioClase
-    , materiaJueves : HorarioClase
-    , materiaViernes : HorarioClase
-    , materiaSabado : HorarioClase
-    , materiaDomingo : HorarioClase
-    }
-
-
-setMateriaId : String -> InstanciaMateria -> InstanciaMateria
-setMateriaId idMat materia =
-    { materia | materiaId = idMat }
-
-
-setMateriaProf : String -> InstanciaMateria -> InstanciaMateria
-setMateriaProf prof materia =
-    { materia | materiaProf = prof }
-
-
-setMateriaLunes : HorarioClase -> InstanciaMateria -> InstanciaMateria
-setMateriaLunes lunes materia =
-    { materia | materiaLunes = lunes }
-
-
-setMateriaMartes : HorarioClase -> InstanciaMateria -> InstanciaMateria
-setMateriaMartes martes materia =
-    { materia | materiaMartes = martes }
-
-
-setMateriaMiercoles : HorarioClase -> InstanciaMateria -> InstanciaMateria
-setMateriaMiercoles miercoles materia =
-    { materia | materiaMiercoles = miercoles }
-
-
-setMateriaJueves : HorarioClase -> InstanciaMateria -> InstanciaMateria
-setMateriaJueves jueves materia =
-    { materia | materiaJueves = jueves }
-
-
-setMateriaViernes : HorarioClase -> InstanciaMateria -> InstanciaMateria
-setMateriaViernes viernes materia =
-    { materia | materiaViernes = viernes }
-
-
-setMateriaSabado : HorarioClase -> InstanciaMateria -> InstanciaMateria
-setMateriaSabado sabado materia =
-    { materia | materiaSabado = sabado }
-
-
-setMateriaDomingo : HorarioClase -> InstanciaMateria -> InstanciaMateria
-setMateriaDomingo domingo materia =
-    { materia | materiaDomingo = domingo }
-
-
-setModelWarnings : Warnings -> Model -> Model
-setModelWarnings warnings model =
-    { model | warnings = warnings }
-
-
-
--- MSG
-
-
-type TimeRangeChangeType
-    = StartTimeUpdate
-    | EndTimeUpdate
-
-
-type Msg
-    = FocusedMateriaNameUpdate String
-    | FocusedMateriaIdUpdate String
-    | FocusedMateriaProfUpdate String
-    | FocusedMateriaLunesUpdate { changeType : TimeRangeChangeType, newStr : String }
-    | FocusedMateriaMartesUpdate { changeType : TimeRangeChangeType, newStr : String }
-    | FocusedMateriaMiercolesUpdate { changeType : TimeRangeChangeType, newStr : String }
-    | FocusedMateriaJuevesUpdate { changeType : TimeRangeChangeType, newStr : String }
-    | FocusedMateriaViernesUpdate { changeType : TimeRangeChangeType, newStr : String }
-    | FocusedMateriaSabadoUpdate { changeType : TimeRangeChangeType, newStr : String }
-    | FocusedMateriaDomingoUpdate { changeType : TimeRangeChangeType, newStr : String }
-    | ListaMateriasNewMateria
-    | ListaMateriasSelectMateria String
-
-
-
 -- INIT
-
-
-emptyMateria : InstanciaMateria
-emptyMateria =
-    { materiaId = ""
-    , materiaProf = ""
-    , materiaLunes = emptyHorario
-    , materiaMartes = emptyHorario
-    , materiaMiercoles = emptyHorario
-    , materiaJueves = emptyHorario
-    , materiaViernes = emptyHorario
-    , materiaSabado = emptyHorario
-    , materiaDomingo = emptyHorario
-    }
 
 
 init : Model
@@ -270,11 +110,11 @@ modifyDate change previoHorarioClase =
 update : Msg -> Model -> Model
 update msg model =
     let
-        dayUpdater : { changeType : TimeRangeChangeType, newStr : String } -> (InstanciaMateria -> HorarioClase) -> (HorarioClase -> InstanciaMateria -> InstanciaMateria) -> Model
+        dayUpdater : { changeType : TimeRangeChangeType, newStr : String } -> (Materia -> HorarioClase) -> (HorarioClase -> Materia -> Materia) -> Model
         dayUpdater newFields getter setter =
             model |> setModelMaterias (model.focusedMateria |> setter (modifyDate newFields (getter model.focusedMateria)))
 
-        textUpdater : (String -> InstanciaMateria -> InstanciaMateria) -> String -> Model
+        textUpdater : (String -> Materia -> Materia) -> String -> Model
         textUpdater setter newStr =
             model |> setModelMaterias (model.focusedMateria |> setter newStr)
 
@@ -339,8 +179,25 @@ update msg model =
             ListaMateriasNewMateria ->
                 tryToAddNewMateria model
 
-            ListaMateriasSelectMateria _ ->
-                Debug.todo "branch 'ListaMateriasSelectMateria _' not implemented"
+            ListaMateriasSelectMateria newFocusedMateriaName ->
+                case Dict.get newFocusedMateriaName model.lMaterias of
+                    Nothing ->
+                        model
+                            |> setModelWarnings
+                                (model.warnings
+                                    |> setGeneralError
+                                        (Just <| "ERROR: La materia " ++ newFocusedMateriaName ++ "\nno se pudo seleccionar")
+                                )
+
+                    Just newFocusedMat ->
+                        model
+                            |> setModelFocusedMateria newFocusedMat
+                            |> setFocusedMateriaName newFocusedMateriaName
+                            |> setModelWarnings
+                                (model.warnings
+                                    |> setGeneralError
+                                        Nothing
+                                )
 
 
 
@@ -501,7 +358,7 @@ botonMateria materiaNameStr =
         , Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
         ]
         { onPress = Just <| ListaMateriasSelectMateria materiaNameStr
-        , label = el [] <| text materiaNameStr
+        , label = Element.none --text materiaNameStr
         }
 
 
@@ -511,12 +368,11 @@ listaDeMaterias model =
         botonesMaterias : List (Element Msg)
         botonesMaterias =
             List.map
-                (\matName ->
-                    if matName /= "" then
-                        botonMateria matName
-
-                    else
-                        Element.none
+                (\matName -> botonMateria matName
+                 -- if matName /= "" then
+                 --     botonMateria matName
+                 -- else
+                 --     Element.none
                 )
                 (Dict.keys model.lMaterias)
 
@@ -537,6 +393,16 @@ listaDeMaterias model =
 
                 Nothing ->
                     Element.none
+
+        generalErrorWarning : Element Msg
+        generalErrorWarning =
+            case model.warnings.generalError of
+                Just errorMsg ->
+                    el [ Font.size 18, Font.color <| Element.rgb255 219 51 53 ]
+                        (text <| errorMsg)
+
+                Nothing ->
+                    Element.none
     in
     Element.column
         [ Element.width (Element.fillPortion 1 |> Element.maximum 550) -- TODO BETTER MAXIMUM
@@ -547,6 +413,7 @@ listaDeMaterias model =
             [ el [ Font.bold, Font.size 22 ] (text "Materias")
             , newMateriaWarning
             , renameToExistingMateriaNameWarning
+            , generalErrorWarning
             ]
         , Element.column
             [ Element.width <| Element.fill
