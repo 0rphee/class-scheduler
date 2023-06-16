@@ -50,10 +50,16 @@ main =
 -- MODEL
 
 
+type alias Warnings =
+    { emptyNameWhenClickingNewMateria : Bool
+    }
+
+
 type alias Model =
     { focusedMateriaName : String
     , focusedMateria : InstanciaMateria
     , lMaterias : Dict String InstanciaMateria
+    , warnings : Warnings
     }
 
 
@@ -185,7 +191,7 @@ emptyMateria =
 
 init : Model
 init =
-    Model "" emptyMateria (Dict.singleton "" emptyMateria)
+    Model "" emptyMateria (Dict.singleton "" emptyMateria) { emptyNameWhenClickingNewMateria = False }
 
 
 
@@ -248,6 +254,18 @@ update msg model =
         textUpdater : (String -> InstanciaMateria -> InstanciaMateria) -> String -> Model
         textUpdater setter newStr =
             model |> setModelMaterias (model.focusedMateria |> setter newStr)
+
+        tryToAddNewMateria : Model -> Model
+        tryToAddNewMateria m =
+            if not <| Dict.member "" m.lMaterias then
+                { focusedMateriaName = ""
+                , focusedMateria = emptyMateria
+                , lMaterias = Dict.insert "" emptyMateria m.lMaterias
+                , warnings = { emptyNameWhenClickingNewMateria = False }
+                }
+
+            else
+                { m | warnings = { emptyNameWhenClickingNewMateria = True } }
     in
     Debug.log "update" <|
         case msg of
@@ -284,7 +302,7 @@ update msg model =
                 dayUpdater fieldUpdate .materiaDomingo setMateriaDomingo
 
             ListaMateriasNewMateria ->
-                Debug.todo "branch 'ListaMateriasNewMateria' not implemented"
+                tryToAddNewMateria model
 
             ListaMateriasSelectMateria _ ->
                 Debug.todo "branch 'ListaMateriasSelectMateria _' not implemented"
@@ -453,13 +471,37 @@ botonMateria materiaNameStr =
 
 
 listaDeMaterias : Model -> Element Msg
-listaDeMaterias m =
+listaDeMaterias model =
+    let
+        botonesMaterias : List (Element Msg)
+        botonesMaterias =
+            List.map
+                (\matName ->
+                    if matName /= "" then
+                        botonMateria matName
+
+                    else
+                        Element.none
+                )
+                (Dict.keys model.lMaterias)
+
+        newMateriaWarning : Element Msg
+        newMateriaWarning =
+            if model.warnings.emptyNameWhenClickingNewMateria then
+                el [ Font.size 18, Font.color <| Element.rgb255 219 51 53 ] (text "\nCambia el nombre de la materia\nactual antes de crear una nueva")
+
+            else
+                Element.none
+    in
     Element.column
         [ Element.width (Element.fillPortion 1 |> Element.maximum 550) -- TODO BETTER MAXIMUM
         , Element.spacing 15
         , Element.alignTop
         ]
-        [ el [ Font.bold, Font.size 22 ] (text "Materias")
+        [ Element.textColumn [ Element.width Element.shrink ]
+            [ el [ Font.bold, Font.size 22 ] (text "Materias")
+            , newMateriaWarning
+            ]
         , Element.column
             [ Element.width <| Element.fill
             , Border.rounded 15
@@ -467,9 +509,7 @@ listaDeMaterias m =
             , Background.color <| Element.rgb255 255 255 255
             , Element.spacing 15
             ]
-            [ botonNuevaMateria
-            , botonMateria m.focusedMateriaName
-            ]
-
-        -- TODO change to a list buttons of materias
+            (botonNuevaMateria
+                :: botonesMaterias
+            )
         ]
