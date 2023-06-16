@@ -52,7 +52,25 @@ main =
 
 type alias Warnings =
     { emptyNameWhenClickingNewMateria : Bool
+    , alreadyExistingMateriaRename : Maybe String
     }
+
+
+emptyWarnings : Warnings
+emptyWarnings =
+    { emptyNameWhenClickingNewMateria = False
+    , alreadyExistingMateriaRename = Nothing
+    }
+
+
+setEmptyNameWhenClickingNewMateria : Bool -> Warnings -> Warnings
+setEmptyNameWhenClickingNewMateria b warning =
+    { warning | emptyNameWhenClickingNewMateria = b }
+
+
+setAlreadyExistingMateriaRename : Maybe String -> Warnings -> Warnings
+setAlreadyExistingMateriaRename b warning =
+    { warning | alreadyExistingMateriaRename = b }
 
 
 type alias Model =
@@ -147,6 +165,11 @@ setMateriaDomingo domingo materia =
     { materia | materiaDomingo = domingo }
 
 
+setModelWarnings : Warnings -> Model -> Model
+setModelWarnings warnings model =
+    { model | warnings = warnings }
+
+
 
 -- MSG
 
@@ -191,7 +214,7 @@ emptyMateria =
 
 init : Model
 init =
-    Model "" emptyMateria (Dict.singleton "" emptyMateria) { emptyNameWhenClickingNewMateria = False }
+    Model "" emptyMateria (Dict.singleton "" emptyMateria) emptyWarnings
 
 
 
@@ -261,18 +284,30 @@ update msg model =
                 { focusedMateriaName = ""
                 , focusedMateria = emptyMateria
                 , lMaterias = Dict.insert "" emptyMateria m.lMaterias
-                , warnings = { emptyNameWhenClickingNewMateria = False }
+                , warnings = m.warnings |> setEmptyNameWhenClickingNewMateria False
                 }
 
             else
-                { m | warnings = { emptyNameWhenClickingNewMateria = True } }
+                { m | warnings = m.warnings |> setEmptyNameWhenClickingNewMateria True }
     in
     Debug.log "update" <|
         case msg of
             FocusedMateriaNameUpdate newName ->
-                -- remove old name of the currently focusedMateria to add it later with setMaterias
-                { model | lMaterias = Dict.remove model.focusedMateriaName model.lMaterias, focusedMateriaName = newName }
-                    |> setModelMaterias model.focusedMateria
+                if Dict.member newName model.lMaterias then
+                    model
+                        |> setModelWarnings
+                            (model.warnings
+                                |> setAlreadyExistingMateriaRename (Just newName)
+                            )
+
+                else
+                    -- remove old name of the currently focusedMateria to add it later with setMaterias
+                    { model | lMaterias = Dict.remove model.focusedMateriaName model.lMaterias, focusedMateriaName = newName }
+                        |> setModelMaterias model.focusedMateria
+                        |> setModelWarnings
+                            (model.warnings
+                                |> setAlreadyExistingMateriaRename Nothing
+                            )
 
             FocusedMateriaIdUpdate newId ->
                 textUpdater setMateriaId newId
@@ -466,7 +501,7 @@ botonMateria materiaNameStr =
         , Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
         ]
         { onPress = Just <| ListaMateriasSelectMateria materiaNameStr
-        , label = Element.row [] [ text materiaNameStr ]
+        , label = el [] <| text materiaNameStr
         }
 
 
@@ -492,6 +527,16 @@ listaDeMaterias model =
 
             else
                 Element.none
+
+        renameToExistingMateriaNameWarning : Element Msg
+        renameToExistingMateriaNameWarning =
+            case model.warnings.alreadyExistingMateriaRename of
+                Just alreadyExistingName ->
+                    el [ Font.size 18, Font.color <| Element.rgb255 219 51 53 ]
+                        (text <| "\nYa existe una materia llamada\n" ++ alreadyExistingName)
+
+                Nothing ->
+                    Element.none
     in
     Element.column
         [ Element.width (Element.fillPortion 1 |> Element.maximum 550) -- TODO BETTER MAXIMUM
@@ -501,6 +546,7 @@ listaDeMaterias model =
         [ Element.textColumn [ Element.width Element.shrink ]
             [ el [ Font.bold, Font.size 22 ] (text "Materias")
             , newMateriaWarning
+            , renameToExistingMateriaNameWarning
             ]
         , Element.column
             [ Element.width <| Element.fill
