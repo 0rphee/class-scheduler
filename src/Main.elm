@@ -51,7 +51,8 @@ main =
 
 
 type alias Model =
-    { focusedMateria : InstanciaMateria
+    { focusedMateriaName : String
+    , focusedMateria : InstanciaMateria
     , lMaterias : Dict String InstanciaMateria
     }
 
@@ -62,7 +63,7 @@ setModelMaterias mat model =
         newModel =
             { model | focusedMateria = mat }
     in
-    { newModel | lMaterias = Dict.insert newModel.focusedMateria.materiaName newModel.focusedMateria newModel.lMaterias }
+    { newModel | lMaterias = Dict.insert newModel.focusedMateriaName newModel.focusedMateria newModel.lMaterias }
 
 
 
@@ -84,7 +85,6 @@ emptyHorario =
 
 type alias InstanciaMateria =
     { materiaId : String
-    , materiaName : String
     , materiaProf : String
     , materiaLunes : HorarioClase
     , materiaMartes : HorarioClase
@@ -99,11 +99,6 @@ type alias InstanciaMateria =
 setMateriaId : String -> InstanciaMateria -> InstanciaMateria
 setMateriaId idMat materia =
     { materia | materiaId = idMat }
-
-
-setMateriaName : String -> InstanciaMateria -> InstanciaMateria
-setMateriaName name materia =
-    { materia | materiaName = name }
 
 
 setMateriaProf : String -> InstanciaMateria -> InstanciaMateria
@@ -177,7 +172,6 @@ type Msg
 emptyMateria : InstanciaMateria
 emptyMateria =
     { materiaId = ""
-    , materiaName = ""
     , materiaProf = ""
     , materiaLunes = emptyHorario
     , materiaMartes = emptyHorario
@@ -191,7 +185,7 @@ emptyMateria =
 
 init : Model
 init =
-    Model emptyMateria (Dict.singleton "" emptyMateria)
+    Model "" emptyMateria (Dict.singleton "" emptyMateria)
 
 
 
@@ -259,8 +253,8 @@ update msg model =
         case msg of
             FocusedMateriaNameUpdate newName ->
                 -- remove old name of the currently focusedMateria to add it later with setMaterias
-                { model | lMaterias = Dict.remove model.focusedMateria.materiaName model.lMaterias }
-                    |> setModelMaterias (model.focusedMateria |> setMateriaName newName)
+                { model | lMaterias = Dict.remove model.focusedMateriaName model.lMaterias, focusedMateriaName = newName }
+                    |> setModelMaterias model.focusedMateria
 
             FocusedMateriaIdUpdate newId ->
                 textUpdater setMateriaId newId
@@ -401,7 +395,7 @@ vistaDeMateria m =
         (column [ Element.spacing 10, Element.width <| Element.fill ]
             [ materiaTextInfoInput
                 { onChange = FocusedMateriaNameUpdate -- : String -> Msg
-                , text = m.focusedMateria.materiaName -- : String
+                , text = m.focusedMateriaName -- : String
                 , placeholder = Just (Input.placeholder [] <| text "nombre de materia")
                 , label = Input.labelLeft [ Font.bold, Font.size 30 ] (text "Materia") -- : Label Msg
                 }
@@ -474,7 +468,7 @@ listaDeMaterias m =
             , Element.spacing 15
             ]
             [ botonNuevaMateria
-            , botonMateria m.focusedMateria.materiaName
+            , botonMateria m.focusedMateriaName
             ]
 
         -- TODO change to a list buttons of materias
