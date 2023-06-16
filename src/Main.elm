@@ -166,6 +166,7 @@ type Msg
     | FocusedMateriaViernesUpdate { changeType : TimeRangeChangeType, newStr : String }
     | FocusedMateriaSabadoUpdate { changeType : TimeRangeChangeType, newStr : String }
     | FocusedMateriaDomingoUpdate { changeType : TimeRangeChangeType, newStr : String }
+    | ListaMateriasNewMateria
 
 
 
@@ -287,6 +288,9 @@ update msg model =
             FocusedMateriaDomingoUpdate fieldUpdate ->
                 dayUpdater fieldUpdate .materiaDomingo setMateriaDomingo
 
+            ListaMateriasNewMateria ->
+                Debug.todo "branch 'ListaMateriasNewMateria' not implemented"
+
 
 
 -- VIEW
@@ -353,7 +357,7 @@ dayInputEl msgConstructor horario dayStr =
                 { changeType = changeT, newStr = nStr }
     in
     column [ Element.spacing 20 ]
-        [ el [ Element.alignLeft ] (text dayStr)
+        [ el [ Element.alignLeft, Font.size 22 ] (text dayStr)
         , row
             [ Border.rounded 15
             , Border.width 0
@@ -396,13 +400,13 @@ vistaDeMateria m =
                 { onChange = FocusedMateriaNameUpdate -- : String -> Msg
                 , text = m.focusedMateria.materiaName -- : String
                 , placeholder = Just (Input.placeholder [] <| text "nombre de materia")
-                , label = Input.labelLeft [ Font.bold, Font.size 22 ] (text "Materia") -- : Label Msg
+                , label = Input.labelLeft [ Font.bold, Font.size 30 ] (text "Materia") -- : Label Msg
                 }
             , materiaTextInfoInput
                 { onChange = FocusedMateriaProfUpdate
                 , text = m.focusedMateria.materiaProf
                 , placeholder = Just (Input.placeholder [] <| text "nombre del profesor")
-                , label = Input.labelAbove [ Font.extraLight ] (text "Profesor")
+                , label = Input.labelAbove [ Font.extraLight, Font.size 22 ] (text "Profesor")
                 }
             , dayInputEl FocusedMateriaLunesUpdate m.focusedMateria.materiaLunes "Lunes"
             , dayInputEl FocusedMateriaMartesUpdate m.focusedMateria.materiaMartes "Martes"
@@ -413,6 +417,21 @@ vistaDeMateria m =
             , dayInputEl FocusedMateriaDomingoUpdate m.focusedMateria.materiaDomingo "Domingo"
             ]
         )
+
+
+botonNuevaMateria : Element Msg
+botonNuevaMateria =
+    Input.button
+        [ Element.width Element.fill
+        , Border.rounded 15
+        , Element.padding 10
+        , Background.color <| Element.rgb255 248 249 255
+        , Element.spacing 15
+        , Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
+        ]
+        { onPress = Just ListaMateriasNewMateria
+        , label = Element.row [] [ el [ Font.bold, Font.size 35 ] (text "+"), el [ Element.centerY ] (text " Nueva Materia") ]
+        }
 
 
 listaDeMaterias : Model -> Element Msg
@@ -430,7 +449,16 @@ listaDeMaterias m =
             , Background.color <| Element.rgb255 255 255 255
             , Element.spacing 15
             ]
-            [ text m.focusedMateria.materiaName ]
+            [ botonNuevaMateria
+            , el
+                [ Element.width Element.fill
+                , Border.rounded 15
+                , Element.padding 15
+                , Background.color <| Element.rgb255 248 249 255
+                , Element.spacing 15
+                ]
+                (text m.focusedMateria.materiaName)
+            ]
 
         -- TODO change to a list buttons of materias
         ]
