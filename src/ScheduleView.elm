@@ -12,6 +12,7 @@ import Msg exposing (..)
 import String exposing (String(..))
 import Svg
 import Svg.Attributes as SvgAttr
+import Tuple exposing (first)
 import TypedTime as T exposing (TypedTime)
 
 
@@ -98,6 +99,31 @@ mockData =
     }
 
 
+renderDay : String -> HorarioClase -> Element msg
+renderDay nameStr { inicio, final } =
+    row
+        [ height <| px 80
+        , Border.roundEach { topLeft = 0, topRight = 15, bottomLeft = 0, bottomRight = 15 }
+        , Background.color (Element.rgb255 222 244 230)
+        , Font.color (Element.rgb255 91 172 116)
+        , Font.size 14
+        ]
+        [ el
+            [ Background.color (Element.rgb255 91 172 116)
+            , width <| px 7
+            , height fill
+            ]
+            none
+        , column
+            [ padding 12
+            , width <| Element.fillPortion 9
+            , alignTop
+            , height fill
+            ]
+            [ text nameStr, {- el [ height <| px 5 ] none, -} el [ Element.alignBottom ] (text (first inicio ++ " - " ++ first final)) ]
+        ]
+
+
 main =
     Element.layout
         [ Font.family
@@ -107,6 +133,7 @@ main =
         , Font.size 19
         , Background.color <| Element.rgb255 245 246 250
         , Element.padding 15
+        , Element.inFront (renderDay "Cálculo" mockData.materiaLunes)
         ]
         (el
             [ Element.width Element.fill
@@ -149,10 +176,8 @@ weekView m =
             -- vertical lines on top
             , Element.inFront <|
                 row
-                    [ Element.spaceEvenly
-                    , width fill
+                    [ width fill
                     , Element.paddingXY 65 0
-                    , Border.rounded 15
                     , Font.color (Element.rgba 1 0 0 0)
                     , alignTop
                     ]
@@ -162,7 +187,7 @@ weekView m =
             [ row
                 [ Element.spaceEvenly
                 , width fill
-                , Element.paddingXY 50 35
+                , Element.paddingXY 65 35
                 , Background.color <| Element.rgb255 248 249 255
 
                 -- , Border.rounded 15
