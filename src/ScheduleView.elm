@@ -60,20 +60,28 @@ generateHorizontalRows startF endF =
 
 svgHorizontalLine : Element msg
 svgHorizontalLine =
+    let
+        xSize =
+            "2000"
+    in
     el [] <|
         Element.html <|
             Svg.svg
-                [ SvgAttr.width "2000", SvgAttr.height "2" ]
-                [ Svg.line [ SvgAttr.x1 "0", SvgAttr.y1 "0", SvgAttr.x2 "2000", SvgAttr.y2 "0", SvgAttr.stroke "rgb(231 233 242)", SvgAttr.strokeWidth "2" ] [] ]
+                [ SvgAttr.width xSize, SvgAttr.height "2" ]
+                [ Svg.line [ SvgAttr.x1 "0", SvgAttr.y1 "0", SvgAttr.x2 xSize, SvgAttr.y2 "0", SvgAttr.stroke "rgb(231 233 242)", SvgAttr.strokeWidth "2" ] [] ]
 
 
 svgVerticalLine : Element msg
 svgVerticalLine =
+    let
+        ySize =
+            "3000"
+    in
     el [] <|
         Element.html <|
             Svg.svg
-                [ SvgAttr.width "2", SvgAttr.height "300" ]
-                [ Svg.line [ SvgAttr.x1 "0", SvgAttr.y1 "0", SvgAttr.x2 "0", SvgAttr.y2 "300", SvgAttr.stroke "rgb(231 233 242)", SvgAttr.strokeWidth "2" ] [] ]
+                [ SvgAttr.width "2", SvgAttr.height ySize ]
+                [ Svg.line [ SvgAttr.x1 "0", SvgAttr.y1 "0", SvgAttr.x2 "0", SvgAttr.y2 ySize, SvgAttr.stroke "rgb(231 233 242)", SvgAttr.strokeWidth "2" ] [] ]
 
 
 mockData : Materia
@@ -143,15 +151,12 @@ weekView m =
                 row
                     [ Element.spaceEvenly
                     , width fill
-                    , Element.paddingXY 50 0
+                    , Element.paddingXY 65 0
                     , Border.rounded 15
                     , Font.color (Element.rgba 1 0 0 0)
                     , alignTop
                     ]
                     (List.map (\x -> el [ width <| Element.fillPortion (String.length x) ] svgVerticalLine) materiasStrs)
-
-            --List.repeat 6 svgVerticalLine)
-            -- (List.intersperse svgVerticalLine topBarItems)
             ]
             -- topBar
             [ row
@@ -159,7 +164,9 @@ weekView m =
                 , width fill
                 , Element.paddingXY 50 35
                 , Background.color <| Element.rgb255 248 249 255
-                , Border.rounded 15
+
+                -- , Border.rounded 15
+                , Border.roundEach { topLeft = 15, topRight = 15, bottomLeft = 0, bottomRight = 0 }
                 , Font.color (Element.rgb255 143 164 190)
                 ]
                 topBarItems
@@ -167,7 +174,7 @@ weekView m =
                 [ Element.spaceEvenly
                 , height fill
                 , spacing 40
-                , Element.paddingXY 0 30
+                , Element.paddingEach { top = 30, bottom = 30, left = 15, right = 0 }
                 , Font.color <| Element.rgb255 92 121 158
                 , Font.size 15
                 ]
