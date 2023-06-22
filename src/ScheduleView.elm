@@ -42,14 +42,14 @@ genHorarioClase ini fin =
     }
 
 
-genTT : Float -> Float -> List (Element Msg)
-genTT startF endF =
+generateHorizontalRows : Float -> Float -> List (Element Msg)
+generateHorizontalRows startF endF =
     let
         helper : List (Element Msg) -> Float -> List (Element Msg)
         helper carry next =
-            if next > startF then
+            if next >= startF then
                 helper
-                    (row [] [ text (T.toString T.Hours <| T.hours next), svgHorizontalLine ] :: carry)
+                    (row [ spacing 10 ] [ text (T.toString T.Hours <| T.hours next), svgHorizontalLine ] :: carry)
                     (next - 0.5)
 
             else
@@ -166,9 +166,13 @@ weekView m =
             , column
                 [ Element.spaceEvenly
                 , height fill
-                , spacing 100
+                , spacing 40
                 , Element.paddingXY 0 30
+                , Font.color <| Element.rgb255 92 121 158
+                , Font.size 15
                 ]
-                (List.repeat 7 svgHorizontalLine)
+                (generateHorizontalRows 0 24)
+
+            -- (List.repeat 7 svgHorizontalLine)
             ]
         )
