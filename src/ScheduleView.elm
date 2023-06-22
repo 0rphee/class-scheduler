@@ -167,7 +167,7 @@ weekView m =
 
                 -- , Border.rounded 15
                 , Border.roundEach { topLeft = 15, topRight = 15, bottomLeft = 0, bottomRight = 0 }
-                , Font.color (Element.rgb255 143 164 190)
+                , Font.color (Element.rgb255 92 121 158)
                 ]
                 topBarItems
             , column
@@ -175,7 +175,7 @@ weekView m =
                 , height fill
                 , spacing 40
                 , Element.paddingEach { top = 30, bottom = 30, left = 15, right = 0 }
-                , Font.color <| Element.rgb255 92 121 158
+                , Font.color (Element.rgb255 143 164 190)
                 , Font.size 15
                 ]
                 (generateHorizontalRows 0 24)
