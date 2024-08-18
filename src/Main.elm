@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Browser
-import Debug
 import Dict
 import Element exposing (Element, column, el, fill, px, row, text, width)
 import Element.Background as Background
@@ -130,74 +129,73 @@ update msg model =
             else
                 { m | warnings = m.warnings |> setEmptyNameWhenClickingNewMateria True }
     in
-    Debug.log "update" <|
-        case msg of
-            FocusedMateriaNameUpdate newName ->
-                if Dict.member newName model.lMaterias then
+    case msg of
+        FocusedMateriaNameUpdate newName ->
+            if Dict.member newName model.lMaterias then
+                model
+                    |> setModelWarnings
+                        (model.warnings
+                            |> setAlreadyExistingMateriaRename (Just newName)
+                        )
+
+            else
+                -- remove old name of the currently focusedMateria to add it later with setMaterias
+                { model | lMaterias = Dict.remove model.focusedMateriaName model.lMaterias, focusedMateriaName = newName }
+                    |> setModelMaterias model.focusedMateria
+                    |> setModelWarnings
+                        (model.warnings
+                            |> setAlreadyExistingMateriaRename Nothing
+                        )
+
+        FocusedMateriaIdUpdate newId ->
+            textUpdater setMateriaId newId
+
+        FocusedMateriaProfUpdate newProf ->
+            textUpdater setMateriaProf newProf
+
+        FocusedMateriaLunesUpdate fieldUpdate ->
+            dayUpdater fieldUpdate .materiaLunes setMateriaLunes
+
+        FocusedMateriaMartesUpdate fieldUpdate ->
+            dayUpdater fieldUpdate .materiaMartes setMateriaMartes
+
+        FocusedMateriaMiercolesUpdate fieldUpdate ->
+            dayUpdater fieldUpdate .materiaMiercoles setMateriaMiercoles
+
+        FocusedMateriaJuevesUpdate fieldUpdate ->
+            dayUpdater fieldUpdate .materiaJueves setMateriaJueves
+
+        FocusedMateriaViernesUpdate fieldUpdate ->
+            dayUpdater fieldUpdate .materiaViernes setMateriaViernes
+
+        FocusedMateriaSabadoUpdate fieldUpdate ->
+            dayUpdater fieldUpdate .materiaSabado setMateriaSabado
+
+        FocusedMateriaDomingoUpdate fieldUpdate ->
+            dayUpdater fieldUpdate .materiaDomingo setMateriaDomingo
+
+        ListaMateriasNewMateria ->
+            tryToAddNewMateria model
+
+        ListaMateriasSelectMateria newFocusedMateriaName ->
+            case Dict.get newFocusedMateriaName model.lMaterias of
+                Nothing ->
                     model
                         |> setModelWarnings
                             (model.warnings
-                                |> setAlreadyExistingMateriaRename (Just newName)
+                                |> setGeneralError
+                                    (Just <| "ERROR: La materia " ++ newFocusedMateriaName ++ "\nno se pudo seleccionar")
                             )
 
-                else
-                    -- remove old name of the currently focusedMateria to add it later with setMaterias
-                    { model | lMaterias = Dict.remove model.focusedMateriaName model.lMaterias, focusedMateriaName = newName }
-                        |> setModelMaterias model.focusedMateria
+                Just newFocusedMat ->
+                    model
+                        |> setModelFocusedMateria newFocusedMat
+                        |> setFocusedMateriaName newFocusedMateriaName
                         |> setModelWarnings
                             (model.warnings
-                                |> setAlreadyExistingMateriaRename Nothing
+                                |> setGeneralError
+                                    Nothing
                             )
-
-            FocusedMateriaIdUpdate newId ->
-                textUpdater setMateriaId newId
-
-            FocusedMateriaProfUpdate newProf ->
-                textUpdater setMateriaProf newProf
-
-            FocusedMateriaLunesUpdate fieldUpdate ->
-                dayUpdater fieldUpdate .materiaLunes setMateriaLunes
-
-            FocusedMateriaMartesUpdate fieldUpdate ->
-                dayUpdater fieldUpdate .materiaMartes setMateriaMartes
-
-            FocusedMateriaMiercolesUpdate fieldUpdate ->
-                dayUpdater fieldUpdate .materiaMiercoles setMateriaMiercoles
-
-            FocusedMateriaJuevesUpdate fieldUpdate ->
-                dayUpdater fieldUpdate .materiaJueves setMateriaJueves
-
-            FocusedMateriaViernesUpdate fieldUpdate ->
-                dayUpdater fieldUpdate .materiaViernes setMateriaViernes
-
-            FocusedMateriaSabadoUpdate fieldUpdate ->
-                dayUpdater fieldUpdate .materiaSabado setMateriaSabado
-
-            FocusedMateriaDomingoUpdate fieldUpdate ->
-                dayUpdater fieldUpdate .materiaDomingo setMateriaDomingo
-
-            ListaMateriasNewMateria ->
-                tryToAddNewMateria model
-
-            ListaMateriasSelectMateria newFocusedMateriaName ->
-                case Dict.get newFocusedMateriaName model.lMaterias of
-                    Nothing ->
-                        model
-                            |> setModelWarnings
-                                (model.warnings
-                                    |> setGeneralError
-                                        (Just <| "ERROR: La materia " ++ newFocusedMateriaName ++ "\nno se pudo seleccionar")
-                                )
-
-                    Just newFocusedMat ->
-                        model
-                            |> setModelFocusedMateria newFocusedMat
-                            |> setFocusedMateriaName newFocusedMateriaName
-                            |> setModelWarnings
-                                (model.warnings
-                                    |> setGeneralError
-                                        Nothing
-                                )
 
 
 
@@ -239,7 +237,7 @@ title : Element Msg
 title =
     Element.paragraph []
         [ el [ Font.bold, Font.size 45 ] <| text "Class-Scheduler"
-        , el [ Font.extraLight ] <| text " obtén el horario perfecto para tu próximo semestre"
+        , el [ Font.extraLight ] <| text " genera horarios con tus materias"
         ]
 
 
@@ -358,7 +356,7 @@ botonMateria materiaNameStr =
         , Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
         ]
         { onPress = Just <| ListaMateriasSelectMateria materiaNameStr
-        , label = Element.none --text materiaNameStr
+        , label = text materiaNameStr
         }
 
 
@@ -368,11 +366,12 @@ listaDeMaterias model =
         botonesMaterias : List (Element Msg)
         botonesMaterias =
             List.map
-                (\matName -> botonMateria matName
-                 -- if matName /= "" then
-                 --     botonMateria matName
-                 -- else
-                 --     Element.none
+                (\matName ->
+                    if String.isEmpty matName then
+                        Element.none
+
+                    else
+                        botonMateria matName
                 )
                 (Dict.keys model.lMaterias)
 
@@ -389,7 +388,7 @@ listaDeMaterias model =
             case model.warnings.alreadyExistingMateriaRename of
                 Just alreadyExistingName ->
                     el [ Font.size 18, Font.color <| Element.rgb255 219 51 53 ]
-                        (text <| "\nYa existe una materia llamada\n" ++ alreadyExistingName)
+                        (text <| "\nYa existe una materia llamada\n'" ++ alreadyExistingName ++ "''")
 
                 Nothing ->
                     Element.none

@@ -1,4 +1,4 @@
-module ScheduleView exposing (weekView)
+module ScheduleView exposing (mockData, weekView)
 
 import Element exposing (Attribute, Element, alignTop, column, el, fill, height, none, padding, px, row, spacing, text, width)
 import Element.Background as Background
@@ -124,6 +124,7 @@ renderDay nameStr { inicio, final } =
         ]
 
 
+main : Html Msg
 main =
     Element.layout
         [ Font.family
