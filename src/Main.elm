@@ -38,7 +38,7 @@ maybeBind m f =
 -- MAIN
 
 
-main : Program () Model Msg
+main : Program () (Model m) Msg
 main =
     Browser.sandbox
         { init = init
@@ -51,7 +51,7 @@ main =
 -- INIT
 
 
-init : Model
+init : Model x
 init =
     Model "" emptyMateria (Dict.singleton "" emptyMateria) emptyWarnings
 
@@ -73,7 +73,7 @@ strToTypedTime originalHourString =
         )
 
 
-modifyDate : { changeType : TimeRangeChangeType, newStr : String } -> HorarioClase -> HorarioClase
+modifyDate : { changeType : TimeRangeChangeType, newStr : String } -> HorarioClase (Maybe TypedTime) -> HorarioClase (Maybe TypedTime)
 modifyDate change previoHorarioClase =
     let
         strIsValid =
@@ -106,18 +106,18 @@ modifyDate change previoHorarioClase =
                         { previoHorarioClase | final = ( change.newStr, Just typedTime ) }
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model x -> Model x
 update msg model =
     let
-        dayUpdater : { changeType : TimeRangeChangeType, newStr : String } -> (Materia -> HorarioClase) -> (HorarioClase -> Materia -> Materia) -> Model
+        dayUpdater : { changeType : TimeRangeChangeType, newStr : String } -> (Materia x -> HorarioClase x) -> (HorarioClase x -> Materia x -> Materia x) -> Model x
         dayUpdater newFields getter setter =
-            model |> setModelMaterias (model.focusedMateria |> setter (modifyDate newFields (getter model.focusedMateria)))
+            model |> setModelMateria (model.focusedMateria |> setter (modifyDate newFields (getter model.focusedMateria)))
 
-        textUpdater : (String -> Materia -> Materia) -> String -> Model
+        textUpdater : (String -> Materia x -> Materia x) -> String -> Model x
         textUpdater setter newStr =
-            model |> setModelMaterias (model.focusedMateria |> setter newStr)
+            model |> setModelMateria (model.focusedMateria |> setter newStr)
 
-        tryToAddNewMateria : Model -> Model
+        tryToAddNewMateria : Model x -> Model x
         tryToAddNewMateria m =
             if not <| Dict.member "" m.lMaterias then
                 { focusedMateriaName = ""
@@ -141,14 +141,14 @@ update msg model =
             else
                 -- remove old name of the currently focusedMateria to add it later with setMaterias
                 { model | lMaterias = Dict.remove model.focusedMateriaName model.lMaterias, focusedMateriaName = newName }
-                    |> setModelMaterias model.focusedMateria
+                    |> setModelMateria model.focusedMateria
                     |> setModelWarnings
                         (model.warnings
                             |> setAlreadyExistingMateriaRename Nothing
                         )
 
         FocusedMateriaIdUpdate newId ->
-            textUpdater setMateriaId newId
+            textUpdater setMateriaNombre newId
 
         FocusedMateriaProfUpdate newProf ->
             textUpdater setMateriaProf newProf
@@ -174,7 +174,7 @@ update msg model =
         FocusedMateriaDomingoUpdate fieldUpdate ->
             dayUpdater fieldUpdate .materiaDomingo setMateriaDomingo
 
-        ListaMateriasNewMateria ->
+        NewMateria ->
             tryToAddNewMateria model
 
         ListaMateriasSelectMateria newFocusedMateriaName ->
@@ -202,7 +202,7 @@ update msg model =
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model x -> Html Msg
 view m =
     Element.layout
         [ Font.family
@@ -215,7 +215,7 @@ view m =
         (appUI m)
 
 
-appUI : Model -> Element Msg
+appUI : Model x -> Element Msg
 appUI m =
     Element.column
         [ Element.padding 30
@@ -255,7 +255,7 @@ materiaTextInfoInput =
     Input.text ((Element.htmlAttribute <| Html.Attributes.maxlength 60) :: materiaInfoStyle)
 
 
-dayInputEl : ({ changeType : TimeRangeChangeType, newStr : String } -> Msg) -> HorarioClase -> String -> Element Msg
+dayInputEl : ({ changeType : TimeRangeChangeType, newStr : String } -> Msg) -> List (HorarioClase x) -> String -> Element Msg
 dayInputEl msgConstructor horario dayStr =
     let
         constructorHelper constructor changeT nStr =
@@ -292,7 +292,7 @@ materiaDayInput =
     Input.text ((Element.htmlAttribute <| Html.Attributes.maxlength 5) :: materiaInfoStyle)
 
 
-vistaDeMateria : Model -> Element Msg
+vistaDeMateria : Model x -> Element Msg
 vistaDeMateria m =
     el
         [ Element.width (Element.fillPortion 3)
@@ -340,7 +340,7 @@ botonNuevaMateria =
         , Element.spacing 15
         , Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
         ]
-        { onPress = Just ListaMateriasNewMateria
+        { onPress = Just NewMateria
         , label = Element.row [] [ el [ Font.bold, Font.size 35 ] (text "+"), el [ Element.centerY ] (text " Nueva Materia") ]
         }
 
@@ -360,7 +360,7 @@ botonMateria materiaNameStr =
         }
 
 
-listaDeMaterias : Model -> Element Msg
+listaDeMaterias : Model x -> Element Msg
 listaDeMaterias model =
     let
         botonesMaterias : List (Element Msg)
