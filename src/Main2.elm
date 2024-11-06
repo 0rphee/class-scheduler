@@ -36,23 +36,32 @@ init =
 view : Model -> Html Msg
 view m =
     div
-        [ style "border-radius" "2rem"
-        , style "background-color" "grey"
-        , style "padding" "2rem"
-        , style "height" "100%"
+        [ style "font-family" "sans-serif"
         ]
-        [ div
-            []
-            [ h1 [] [ text "Class scheduler" ]
-            , p [] [ text "Crea tus horarios de clases" ]
-            ]
-        , div
-            [ style "display" "flex"
-            , style "flex-direction" "row"
-            , style "gap" "4%"
-            ]
-            [ vistaDeMateria m
-            , listaDeMaterias m
+        [ node "style" [ type_ "text/css" ] [ text "@import url(/styles/style.css)" ]
+        , div []
+            [ div
+                [ class "header" ]
+                [ h1
+                    []
+                    [ text "Class scheduler", span [] [ text "Crea tus horarios" ] ]
+                ]
+            , div
+                [ style "border-radius" "2rem"
+
+                -- , style "background-color" "grey"
+                , style "margin" "2em 6%"
+                , style "height" "100%"
+                ]
+                [ div
+                    [ style "display" "flex"
+                    , style "flex-direction" "row"
+                    , style "gap" "4%"
+                    ]
+                    [ vistaDeMateria m
+                    , listaDeMaterias m
+                    ]
+                ]
             ]
         ]
 
@@ -69,8 +78,7 @@ listaDeMaterias model =
         warningDiv : String -> Html Msg
         warningDiv s =
             div
-                [ style "font-size" "18px"
-                , style "color" "rgb(219, 51, 53)"
+                [ class "warning-div"
                 ]
                 [ text s ]
 
@@ -110,25 +118,17 @@ listaDeMaterias model =
                     text ""
     in
     div
-        [ -- Html.width (Html.fillPortion 1 |> Html.maximum 550) -- TODO BETTER MAXIMUM
-          style "max-width" "550px"
-        , style "gap" "15px"
-        , style "display" "flex"
-        , style "flex-direction" "column"
-        ]
+        [ class "lista-materias" ]
         [ div
             []
-            [ span [ style "font-style" "bold" ] [ text "Materias" ]
+            [ span [ style "font-weight" "bold" ] [ text "Materias" ]
             , newMateriaWarning
             , renameToExistingMateriaNameWarning
             , alreadyExistingClaseNameWarning
             , generalErrorWarning
             ]
         , div
-            [ style "width" "100%"
-            , style "border-radius" "15px"
-            , style "padding" "15px"
-            , style "background-color" "rgb(255, 255, 255)"
+            [ style "border-radius" "15px"
             , style "gap" "15px"
             , style "display" "flex"
             , style "flex-direction" "column"
@@ -140,18 +140,10 @@ listaDeMaterias model =
 botonNuevaMateria : Html Msg
 botonNuevaMateria =
     button
-        [ style "width" "100%" --Element.width Element.fill
-        , style "border-radius" "1rem" --Border.rounded 15
-        , style "padding" "1rem" --Element.padding 10
-        , style "background-color" "rgb(248 249 255)" --Background.color <| Element.rgb255 248 249 255
-
-        -- , Element.spacing 15
-        -- , --Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
-        , onClick NewMateria
+        [ onClick NewMateria
         ]
-        --     , label = Html.row [] [ el [ Font.bold, Font.size 35 ] (text "+"), el [ Html.centerY ] (text " Nueva Materia") ]
-        [ span [ style "font-weight" "bold", style "font-size" "3rem" ] [ text "+" ]
-        , span [ style "text-align" "center" ] [ text "Nueva Materia" ]
+        [ span [ style "font-weight" "bold", style "font-size" "1.5rem" ] [ text "+" ]
+        , span [ style "text-align" "center" ] [ text " Nueva Materia" ]
         ]
 
 
@@ -166,13 +158,7 @@ botonSelectMateria materiaNameStr =
                 text materiaNameStr
     in
     button
-        [ style "width" "100%"
-        , style "border-radius" "1rem"
-        , style "padding" "1rem"
-        , style "background-color" "rgb(248 249 255)"
-
-        -- , --Element.mouseOver [ Background.color <| Element.rgb255 214 217 222 ]
-        , onClick <| ListaMateriasSelectMateria materiaNameStr
+        [ onClick <| ListaMateriasSelectMateria materiaNameStr
         ]
         [ buttonContent ]
 
@@ -185,14 +171,7 @@ vistaDeMateria m =
                 Dict.get m.focusedMateriaName m.dictMaterias
     in
     div
-        [ -- Element.width (Element.fillPortion 3)
-          style "border-radius" "15px"
-        , style "padding" "15px"
-        , style "background-color" "rgb(255, 255, 255)"
-        , style "display" "flex"
-        , style "flex-direction" "column"
-        , style "gap" "10px"
-        , style "width" "100%"
+        [ class "vista-materia"
         ]
         [ textInput
             { onChange = FocusedMateriaNameUpdate -- : String -> Msg
@@ -201,13 +180,10 @@ vistaDeMateria m =
             , label = span [ style "font-weight" "bold", style "font-size" "30" ] [ text "Materia" ] -- : Label Msg
             }
         , button
-            [ style "border-radius" "1rem"
-            , style "padding" "1rem"
-            , style "background-color" "rgb(248 249 255)"
-            , onClick NewClase
+            [ onClick NewClase
             ]
             [ span [ style "font-weight" "bold" ] [ text "+" ]
-            , text "Nueva opción de clase para esta materia"
+            , text " Nueva opción de clase para esta materia"
             ]
         , div []
             (focusedMateria.materiaClases
@@ -222,33 +198,30 @@ vistaDeClase idClase dictClases =
     let
         clase =
             Maybe.withDefault
-                -- { claseId = idClase, claseProf = "", claseSesiones = Array.empty }
-                -- (todo "didnt fin clase id")
                 emptyClase
                 (Dict.get idClase dictClases)
     in
     div []
-        [ div []
+        [ div
+            [ class "vista-clase"
+            ]
             [ textInput
                 { onChange = \newClaseId -> FocusedMateriaClaseIdUpdate { oldClaseId = idClase, newClaseId = newClaseId }
                 , text = clase.claseId
                 , placeholder = "1234"
-                , label = span [ style "font-weight" "lighter", style "font-size" "22" ] [ text "ID de la clase" ]
+                , label = span [ class "label-light-span" ] [ text "ID de la clase" ]
                 }
             , textInput
                 { onChange = \newProfName -> FocusedMateriaClaseProfUpdate { claseId = idClase, newProfName = newProfName }
                 , text = clase.claseProf
                 , placeholder = "nombre del profesor"
-                , label = span [ style "font-weight" "lighter", style "font-size" "22" ] [ text "Profesor" ]
+                , label = span [ class "label-light-span" ] [ text "Profesor" ]
                 }
             , button
-                [ style "border-radius" "1rem"
-                , style "padding" "1rem"
-                , style "background-color" "rgb(248 249 255)"
-                , onClick <| NewSesion { idClase = idClase }
+                [ onClick <| NewSesion { idClase = idClase }
                 ]
                 [ span [ style "font-weight" "bold" ] [ text "+" ]
-                , text "Nueva sesión"
+                , text " Nueva sesión"
                 ]
             ]
         , div [] <| Array.toList <| Array.indexedMap (\i sesion -> vistaSesion idClase i sesion) clase.claseSesiones
@@ -278,46 +251,40 @@ vistaSesion idClase indexSesion sesion =
     in
     div
         -- column
-        []
-        [ select [ value <| dayToString sesion.dia, onInput <| inputHelper ] <|
+        [ class "vista-sesion"
+        ]
+        [ select
+            [ value <| dayToString sesion.dia
+            , onInput <| inputHelper
+            ]
+          <|
             List.map (\day -> option [] [ text <| dayToString day ])
                 [ Lunes, Martes, Miercoles, Jueves, Viernes, Sabado, Domingo ]
         , div
             -- row
-            [ style "border-radius" "15px"
-            , style "border-width" "0"
-            , style "font-size" "17px"
-            ]
+            []
             [ materiaDayInput
                 { onChange = constrMsg StartTimeUpdate
                 , text = Tuple.first sesion.sesionHorario.inicio
                 , placeholder = "10:00"
-                , label = text "Hora de inicio"
+                , label = span [ class "label-light-span" ] [ text "Hora de inicio" ]
                 }
             , materiaDayInput
                 { onChange = constrMsg EndTimeUpdate
                 , text = Tuple.first sesion.sesionHorario.final
                 , placeholder = "11:30"
-                , label = text "Hora de término"
+                , label = span [ class "label-light-span" ] [ text "Hora de término" ]
                 }
             ]
         ]
 
 
-materiaInfoStyle : List (Html.Attribute msg)
-materiaInfoStyle =
-    [ style "border-radius" "15px"
-    , style "border-width" "0"
-    , style "background-color" "rgb(248, 249, 255)"
-    , style "width" "100%"
-    ]
-
-
 textInput : { onChange : String -> msg, text : String, placeholder : String, label : Html msg } -> Html msg
 textInput x =
-    Html.label []
+    Html.label
+        []
         [ x.label
-        , Html.input (placeholder x.placeholder :: value x.text :: onInput x.onChange :: maxlength 60 :: materiaInfoStyle) []
+        , Html.input [ placeholder x.placeholder, value x.text, onInput x.onChange, maxlength 60 ] []
         ]
 
 
