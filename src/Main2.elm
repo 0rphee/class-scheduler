@@ -44,7 +44,7 @@ view m =
                 [ class "header" ]
                 [ h1
                     []
-                    [ text "Class scheduler", span [] [ text "Crea tus horarios" ] ]
+                    [ span [ class "h1-name" ] [ text "Class scheduler" ], span [ class "h1-extra" ] [ text "Crea tus horarios" ] ]
                 ]
             , div
                 [ style "border-radius" "2rem"
@@ -103,7 +103,15 @@ listaDeMaterias model =
         alreadyExistingClaseNameWarning =
             case model.warnings.alreadyExistingClaseName of
                 Just alreadyExistingClaseId ->
-                    warningDiv <| "\nYa existe una clase con el ID\n'" ++ alreadyExistingClaseId ++ "'"
+                    let
+                        id =
+                            if String.isEmpty alreadyExistingClaseId then
+                                "<vacío>"
+
+                            else
+                                alreadyExistingClaseId
+                    in
+                    warningDiv <| "\nYa existe una clase con el ID\n'" ++ id ++ "'"
 
                 Nothing ->
                     text ""
@@ -140,11 +148,10 @@ listaDeMaterias model =
 botonNuevaMateria : Html Msg
 botonNuevaMateria =
     button
-        [ onClick NewMateria
+        [ class "btn-important"
+        , onClick NewMateria
         ]
-        [ span [ style "font-weight" "bold", style "font-size" "1.5rem" ] [ text "+" ]
-        , span [ style "text-align" "center" ] [ text " Nueva Materia" ]
-        ]
+        [ text "+ Nueva Materia" ]
 
 
 botonSelectMateria : String -> Html Msg
@@ -159,6 +166,7 @@ botonSelectMateria materiaNameStr =
     in
     button
         [ onClick <| ListaMateriasSelectMateria materiaNameStr
+        , style "font-weight" "lighter"
         ]
         [ buttonContent ]
 
@@ -181,11 +189,11 @@ vistaDeMateria m =
             }
         , button
             [ onClick NewClase
+            , class "btn-important"
             ]
-            [ span [ style "font-weight" "bold" ] [ text "+" ]
-            , text " Nueva opción de clase para esta materia"
+            [ text "+ Nueva opción de clase para esta materia"
             ]
-        , div []
+        , div [ class "flex-col-gap-05" ]
             (focusedMateria.materiaClases
                 |> Set.toList
                 |> List.map (\x -> vistaDeClase x m.dictClases)
@@ -201,7 +209,7 @@ vistaDeClase idClase dictClases =
                 emptyClase
                 (Dict.get idClase dictClases)
     in
-    div []
+    div [ class "flex-col-gap-05", style "padding-left" "2rem" ]
         [ div
             [ class "vista-clase"
             ]
@@ -219,12 +227,12 @@ vistaDeClase idClase dictClases =
                 }
             , button
                 [ onClick <| NewSesion { idClase = idClase }
+                , class "btn-important"
                 ]
-                [ span [ style "font-weight" "bold" ] [ text "+" ]
-                , text " Nueva sesión"
+                [ text "+ Nueva sesión"
                 ]
             ]
-        , div [] <| Array.toList <| Array.indexedMap (\i sesion -> vistaSesion idClase i sesion) clase.claseSesiones
+        , div [ class "flex-col-gap-10", style "padding-left" "2rem" ] <| Array.toList <| Array.indexedMap (\i sesion -> vistaSesion idClase i sesion) clase.claseSesiones
         ]
 
 
@@ -262,17 +270,21 @@ vistaSesion idClase indexSesion sesion =
                 [ Lunes, Martes, Miercoles, Jueves, Viernes, Sabado, Domingo ]
         , div
             -- row
-            []
+            [ class "flex-col-gap-05"
+            , style "display" "flex"
+            , style "flex-direction" "row"
+            , style "gap" "1rem"
+            ]
             [ materiaDayInput
                 { onChange = constrMsg StartTimeUpdate
                 , text = Tuple.first sesion.sesionHorario.inicio
-                , placeholder = "10:00"
+                , placeholder = "ej. 10:00"
                 , label = span [ class "label-light-span" ] [ text "Hora de inicio" ]
                 }
             , materiaDayInput
                 { onChange = constrMsg EndTimeUpdate
                 , text = Tuple.first sesion.sesionHorario.final
-                , placeholder = "11:30"
+                , placeholder = "ej. 11:30"
                 , label = span [ class "label-light-span" ] [ text "Hora de término" ]
                 }
             ]

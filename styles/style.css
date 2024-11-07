@@ -14,6 +14,17 @@ button {
   padding: 1rem;
   border-width: 0;
   border-radius: 1rem;
+  transition: transform ease 0.3s, box-shadow ease 0.3s;
+}
+
+button:hover {
+  transform: translate(0, -3px);
+  box-shadow: 0 20px 80px -10px var(--primary);
+}
+
+
+button.btn-important {
+  font-weight: bold;
 }
 
 input {
@@ -43,7 +54,15 @@ label {
   margin: 0;
 }
 
-.header>h1>span {
+.h1-name {
+  transition: background-color ease 0.2s;
+}
+
+.h1-name:hover {
+  background-color: var(--secondary);
+}
+
+.h1-extra {
   font-size: 1rem;
   font-weight: normal;
   margin-left: 1em
@@ -78,18 +97,32 @@ select {
 }
 
 .lista-materias {
-  max-width: 550px;
+  /* max-width: 550px; */
+  max-width: 35%;
 }
 
 .vista-materia {
   width: 100%;
 }
 
+.flex-col-gap-05,
+.flex-col-gap-10 {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-col-gap-05 {
+  gap: 0.5rem
+}
+
+.flex-col-gap-10 {
+  gap: 1rem
+}
+
 .vista-clase {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding-left: 2rem;
 }
 
 .vista-sesion {
