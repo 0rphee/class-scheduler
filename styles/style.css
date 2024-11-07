@@ -22,7 +22,6 @@ button:hover {
   box-shadow: 0 20px 80px -10px var(--primary);
 }
 
-
 button.btn-important {
   font-weight: bold;
 }
@@ -88,7 +87,7 @@ select {
 
 .lista-materias,
 .vista-materia {
-  background-color: var(--secondary);
+  /* background-color: var(--secondary); */
   padding: 15px;
   border-radius: 15px;
   display: flex;
@@ -96,9 +95,16 @@ select {
   gap: 15px;
 }
 
+.vista-clase-container {
+  background-color: var(--secondary);
+  padding: 15px;
+  border-radius: 0.5rem;
+}
+
 .lista-materias {
   /* max-width: 550px; */
   max-width: 35%;
+  min-width: 20%;
 }
 
 .vista-materia {

@@ -193,7 +193,7 @@ vistaDeMateria m =
             ]
             [ text "+ Nueva opción de clase para esta materia"
             ]
-        , div [ class "flex-col-gap-05" ]
+        , div [ class "flex-col-gap-10" ]
             (focusedMateria.materiaClases
                 |> Set.toList
                 |> List.map (\x -> vistaDeClase x m.dictClases)
@@ -209,7 +209,7 @@ vistaDeClase idClase dictClases =
                 emptyClase
                 (Dict.get idClase dictClases)
     in
-    div [ class "flex-col-gap-05", style "padding-left" "2rem" ]
+    div [ class "flex-col-gap-05", class "vista-clase-container" ]
         [ div
             [ class "vista-clase"
             ]
@@ -278,13 +278,13 @@ vistaSesion idClase indexSesion sesion =
             [ materiaDayInput
                 { onChange = constrMsg StartTimeUpdate
                 , text = Tuple.first sesion.sesionHorario.inicio
-                , placeholder = "ej. 10:00"
+                , placeholder = "ej. 11:30"
                 , label = span [ class "label-light-span" ] [ text "Hora de inicio" ]
                 }
             , materiaDayInput
                 { onChange = constrMsg EndTimeUpdate
                 , text = Tuple.first sesion.sesionHorario.final
-                , placeholder = "ej. 11:30"
+                , placeholder = "ej. 14:30"
                 , label = span [ class "label-light-span" ] [ text "Hora de término" ]
                 }
             ]
