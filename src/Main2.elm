@@ -167,6 +167,7 @@ botonSelectMateria materiaNameStr =
     button
         [ onClick <| ListaMateriasSelectMateria materiaNameStr
         , style "font-weight" "lighter"
+        , style "background-color" "var(--accent)"
         ]
         [ buttonContent ]
 

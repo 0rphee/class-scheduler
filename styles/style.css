@@ -105,10 +105,13 @@ select {
   /* max-width: 550px; */
   max-width: 35%;
   min-width: 20%;
+  box-shadow: 6px 6px 10px 6px var(--secondary);
+  height: fit-content;
 }
 
 .vista-materia {
   width: 100%;
+  box-shadow: 6px 6px 10px 5px var(--secondary);
 }
 
 .flex-col-gap-05,
