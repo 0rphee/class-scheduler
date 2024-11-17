@@ -1,0 +1,22 @@
+{
+  "name": "class-scheduler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "start": "spago build && esbuild ./output/Main/index.js --bundle --serve=127.0.0.1:9000 --servedir=. --outfile=output/index.js --global-name=Main",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esbuild": "^0.24.0",
+    "purescript": "^0.15.15",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "spago": "^0.93.41"
+  }
+}

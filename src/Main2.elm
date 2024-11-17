@@ -38,7 +38,7 @@ view m =
     div
         [ style "font-family" "sans-serif"
         ]
-        [ node "style" [ type_ "text/css" ] [ text "@import url(/styles/style.css)" ]
+        [ node "style" [ type_ "text/css" ] [ text "@import url(/static/styles/style.css)" ]
         , div []
             [ div
                 [ class "header" ]

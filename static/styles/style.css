@@ -8,6 +8,15 @@
   --input-bg: rgb(248, 249, 255);
 }
 
+html {
+  font-family: sans-serif;
+}
+
+body {
+  padding: 0;
+  margin: 0
+}
+
 button {
   background-color: var(--primary);
   color: var(--bg);
