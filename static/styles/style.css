@@ -76,9 +76,27 @@ label {
   margin-left: 1em
 }
 
-.warning-div {
+.content {
+  /* , "backgroundColor": "grey" */
+  border-radius: 2rem;
+  margin: 2em 6%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2em;
+}
+
+.warnings-container {
+  background-color: rgb(219 51 53 / 20%);
+  padding: 0.8rem;
+  border-radius: 1rem;
+  margin: 0;
+}
+
+.warning-li {
   font-size: 18px;
   color: rgb(219, 51, 53);
+  list-style-position: inside;
 }
 
 .label-light-span {
@@ -93,20 +111,24 @@ select {
   padding: 0.3rem;
 }
 
+.main-box-shadow {
+  box-shadow: 6px 6px 10px 6px var(--secondary);
+}
 
 .lista-materias,
 .vista-materia {
   /* background-color: var(--secondary); */
-  padding: 15px;
-  border-radius: 15px;
+  padding: 1rem;
+  border-radius: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 1em;
+  height: fit-content;
 }
 
 .vista-clase-container {
   background-color: var(--secondary);
-  padding: 15px;
+  padding: 1em;
   border-radius: 0.5rem;
 }
 
@@ -114,13 +136,10 @@ select {
   /* max-width: 550px; */
   max-width: 35%;
   min-width: 20%;
-  box-shadow: 6px 6px 10px 6px var(--secondary);
-  height: fit-content;
 }
 
 .vista-materia {
   width: 100%;
-  box-shadow: 6px 6px 10px 5px var(--secondary);
 }
 
 .flex-col-gap-05,
@@ -149,8 +168,48 @@ select {
   gap: 0.5rem;
 }
 
+.calendar-container {
+  border-radius: 2rem;
+  padding: 1rem
+    /* , "border": "solid" */
+}
+
 .sesion-hours-container {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.time-labels-container {
+  display: flex;
+  flex-direction: column;
+  min-width: 5%;
+  text-align: center;
+  margin: 0 0.5rem 0 0;
+  position: relative;
+}
+
+.time-labels-container>div {
+  position: relative;
+  height: 1.5rem;
+  top: -0.5rem;
+}
+
+.time-labels-container>div:last-child {
+  position: absolute;
+  top: calc(100% - 0.5rem);
+  width: 100%
+}
+
+.week-column-container {
+  display: flex;
+  justify-content: space-evenly;
+  flex-grow: 1;
+  background-color: white;
+}
+
+.week-column {
+  flex-grow: 1;
+  border-left: 1px solid black;
+  position: relative;
 }

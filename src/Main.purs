@@ -7,6 +7,7 @@ import Data.Array as Array
 import Data.Bounded as T
 import Data.CodePoint.Unicode as U
 import Data.Enum (toEnum)
+import Data.Foldable (class Foldable)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -22,12 +23,12 @@ import Data.Tuple as Tuple
 import Data.Tuple.Nested (type (/\), (/\))
 import Debug (spy)
 import Effect (Effect)
-import Elmish (ReactElement, Transition, Dispatch, (<|))
+import Elmish (Dispatch, ReactElement, Transition, (<|))
 import Elmish.Boot (defaultMain)
 import Elmish.HTML as H
 import Elmish.HTML.Events as E
 import Elmish.HTML.Styled as HS
-import Model (Clase, Day(..), HorarioClase, Materia, Model, Sesion, dayToString, defaultSesion, emptyClase, emptyMateria, emptyWarnings, setAlreadyExistingClaseName, setAlreadyExistingMateriaRename, setClaseSesionInd, setClaseSesiones, setEmptyNameWhenClickingNewMateria, setFocusedMateriaName, setGeneralError, setModelMapClaseInd, setModelMateria, setModelWarnings, setSesionDia, setSesionHorario, stringToDay)
+import Model (Clase, Day(..), HorarioClase, Materia, Model, Sesion, dayToString, defaultSesion, emptyClase, emptyMateria, emptyWarnings, isAnyWarningActive, setAlreadyExistingClaseName, setAlreadyExistingMateriaRename, setClaseSesionInd, setClaseSesiones, setEmptyNameWhenClickingNewMateria, setFocusedMateriaName, setGeneralError, setModelMapClaseInd, setModelMateria, setModelWarnings, setSesionDia, setSesionHorario, stringToDay)
 import Msg (Msg(..), TimeRangeChangeType(..))
 import Sh as Sh
 import Unsafe.Coerce (unsafeCoerce)
@@ -55,15 +56,8 @@ view m dispatch =
           [ H.h1 {}
               [ HS.span "h1-name" (HS.text "Class scheduler"), HS.span "h1-extra" (HS.text "Crea tus horarios") ]
           ]
-      , H.div
-          { style: HS.css
-              { "borderRadius": "2rem"
-              -- , "backgroundColor": "grey"
-              , "margin": "2em 6%"
-              , "height": "100%"
-              }
-          }
-          ( H.div
+      , HS.div "content"
+          [ H.div
               { style: H.css
                   { "display": "flex"
                   , "flexDirection": "row"
@@ -73,8 +67,8 @@ view m dispatch =
               [ vistaDeMateria dispatch m
               , listaDeMaterias dispatch m
               ]
-          )
-      , Sh.main
+          , Sh.main
+          ]
       ]
   )
 
@@ -86,28 +80,27 @@ listaDeMaterias dispatch model =
       (\matName -> botonSelectMateria dispatch matName) <$>
         (Array.fromFoldable $ Map.keys model.dictMaterias)
 
-    warningDiv :: String -> ReactElement
-    warningDiv s = HS.div "warning-div" (HS.text s)
+    warningDivBuilder :: String -> ReactElement
+    warningDivBuilder s = HS.li "warning-li" (HS.text s)
 
     newMateriaWarning :: ReactElement
     newMateriaWarning =
       if model.warnings.emptyNameWhenClickingNewMateria then
-        warningDiv "Cambia el nombre de la materia actual antes de crear una nueva"
-      else
-        HS.text ""
+        warningDivBuilder "Cambia el nombre de la materia actual antes de crear una nueva"
+      else HS.text ""
 
     renameToExistingMateriaNameWarning :: ReactElement
     renameToExistingMateriaNameWarning =
       case model.warnings.alreadyExistingMateriaRename of
         Just alreadyExistingName ->
-          warningDiv $ "\nYa existe una materia llamada\n'" <> alreadyExistingName <> "'"
+          warningDivBuilder $ "Ya existe una materia llamada '" <> alreadyExistingName <> "'"
         Nothing -> HS.text ""
 
     alreadyExistingClaseNameWarning :: ReactElement
     alreadyExistingClaseNameWarning =
       case model.warnings.alreadyExistingClaseName of
         Just alreadyExistingClaseId ->
-          warningDiv $ "\nYa existe una clase con el ID\n'" <> id <> "'"
+          warningDivBuilder $ "Ya existe una clase con el ID'" <> id <> "'"
           where
           id =
             if String.null alreadyExistingClaseId then "<vacío>"
@@ -117,18 +110,24 @@ listaDeMaterias dispatch model =
     generalErrorWarning :: ReactElement
     generalErrorWarning =
       case model.warnings.generalError of
-        Just errorMsg -> warningDiv errorMsg
+        Just errorMsg -> warningDivBuilder errorMsg
         Nothing -> HS.text ""
-  in
-    HS.div
-      "lista-materias"
-      [ H.div {}
-          [ H.span { style: H.css { "fontWeight": "bold" } } (HS.text "Materias")
-          , newMateriaWarning
+
+    warningsDiv :: ReactElement
+    warningsDiv =
+      if isAnyWarningActive (log "warns" model.warnings) then
+        HS.ul "warnings-container"
+          [ newMateriaWarning
           , renameToExistingMateriaNameWarning
           , alreadyExistingClaseNameWarning
           , generalErrorWarning
           ]
+      else H.text ""
+  in
+    HS.div
+      "lista-materias main-box-shadow"
+      [ H.span { style: H.css { "fontWeight": "bold" } } (HS.text "Materias")
+      , warningsDiv
       , H.div
           { style: H.css
               { "borderRadius": "15px"
@@ -164,9 +163,9 @@ botonSelectMateria dispatch materiaNameStr =
 vistaDeMateria :: Dispatch Msg -> Model -> ReactElement
 vistaDeMateria dispatch m =
   HS.div
-    "vista-materia"
+    "vista-materia main-box-shadow"
     [ textInput dispatch
-        { onChange: FocusedMateriaNameUpdate -- :: String -> Msg
+        { onChange: FocusedMateriaNameUpdate
         , text: m.focusedMateriaName
         , placeholder: "nombre de materia"
         , label: H.span { style: H.css { "fontWeight": "bold", "fontSize": "30" } } (HS.text "Materia")

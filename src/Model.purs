@@ -1,15 +1,14 @@
 module Model where
 
--- import Data.Array
--- import Debug (todo)
--- import Html.Events (targetValue)
-
 import Data.Time
 
 import Data.Array as Array
+import Data.BooleanAlgebra ((||))
+import Data.Foldable as Foldable
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
+import Data.Maybe as Maybe
 import Data.Set (Set)
 import Data.Set as Set
 import Data.Tuple.Nested (type (/\), (/\))
@@ -44,6 +43,13 @@ type Warnings =
   , alreadyExistingClaseName :: Maybe String
   , generalError :: Maybe String
   }
+
+isAnyWarningActive :: Warnings -> Boolean
+isAnyWarningActive w = w.emptyNameWhenClickingNewMateria || Foldable.any (Maybe.isJust)
+  [ w.alreadyExistingMateriaRename
+  , w.alreadyExistingClaseName
+  , w.generalError
+  ]
 
 emptyWarnings :: Warnings
 emptyWarnings =
