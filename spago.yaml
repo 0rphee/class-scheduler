@@ -7,6 +7,9 @@ package:
     - effect
     - elmish
     - elmish-html
+    - formatters
+    - integers
+    - numbers
     - prelude
     - unicode
   test:

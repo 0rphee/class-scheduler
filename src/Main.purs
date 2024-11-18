@@ -29,6 +29,7 @@ import Elmish.HTML.Events as E
 import Elmish.HTML.Styled as HS
 import Model (Clase, Day(..), HorarioClase, Materia, Model, Sesion, dayToString, defaultSesion, emptyClase, emptyMateria, emptyWarnings, setAlreadyExistingClaseName, setAlreadyExistingMateriaRename, setClaseSesionInd, setClaseSesiones, setEmptyNameWhenClickingNewMateria, setFocusedMateriaName, setGeneralError, setModelMapClaseInd, setModelMateria, setModelWarnings, setSesionDia, setSesionHorario, stringToDay)
 import Msg (Msg(..), TimeRangeChangeType(..))
+import Sh as Sh
 import Unsafe.Coerce (unsafeCoerce)
 
 log :: forall a. String -> a -> a
@@ -48,34 +49,34 @@ init = pure
 
 view :: Model -> Dispatch Msg -> ReactElement
 view m dispatch =
-  H.div {}
-    ( H.div {}
-        [ HS.div
-            "header"
-            [ H.h1 {}
-                [ HS.span "h1-name" (HS.text "Class scheduler"), HS.span "h1-extra" (HS.text "Crea tus horarios") ]
-            ]
-        , H.div
-            { style: HS.css
-                { "borderRadius": "2rem"
-                -- , "backgroundColor": "grey"
-                , "margin": "2em 6%"
-                , "height": "100%"
-                }
-            }
-            ( H.div
-                { style: H.css
-                    { "display": "flex"
-                    , "flexDirection": "row"
-                    , "gap": "4%"
-                    }
-                }
-                [ vistaDeMateria dispatch m
-                , listaDeMaterias dispatch m
-                ]
-            )
-        ]
-    )
+  ( H.div {}
+      [ HS.div
+          "header"
+          [ H.h1 {}
+              [ HS.span "h1-name" (HS.text "Class scheduler"), HS.span "h1-extra" (HS.text "Crea tus horarios") ]
+          ]
+      , H.div
+          { style: HS.css
+              { "borderRadius": "2rem"
+              -- , "backgroundColor": "grey"
+              , "margin": "2em 6%"
+              , "height": "100%"
+              }
+          }
+          ( H.div
+              { style: H.css
+                  { "display": "flex"
+                  , "flexDirection": "row"
+                  , "gap": "4%"
+                  }
+              }
+              [ vistaDeMateria dispatch m
+              , listaDeMaterias dispatch m
+              ]
+          )
+      , Sh.main
+      ]
+  )
 
 listaDeMaterias :: Dispatch Msg -> Model -> ReactElement
 listaDeMaterias dispatch model =

@@ -72,7 +72,7 @@ setGeneralError maybeString warnings =
 -- HORARIO
 -- horas de inicio y final de clase en determinado Día
 
-type HorarioClase maybetime =
+type HorarioClase (maybetime :: Type) =
   { inicio :: (String /\ maybetime)
   , final :: (String /\ maybetime)
   }
