@@ -2,14 +2,12 @@ module Main (main) where
 
 import Prelude
 
-import CalendarView (mockData)
 import CalendarView as CV
 import Control.Alternative (guard)
 import Data.Array as Array
 import Data.Bounded as T
 import Data.CodePoint.Unicode as U
 import Data.Enum (toEnum)
-import Data.Foldable (class Foldable)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -34,15 +32,12 @@ import Model (Clase, Day(..), HorarioClase, Materia, Model, Sesion, dayToString,
 import Msg (Msg(..), TimeRangeChangeType(..))
 import Unsafe.Coerce (unsafeCoerce)
 
-log :: forall a. String -> a -> a
-log = spy
-
 main :: Effect Unit
 main = defaultMain { def: { init, view, update }, elementId: "app" }
 
 init :: Transition Msg Model
 init = pure $
-  log "init"
+  spy "init"
     { focusedMateriaName: ""
     , dictMaterias: Map.singleton "" emptyMateria
     , dictClases: Map.empty
@@ -62,7 +57,7 @@ view m dispatch =
               [ vistaDeMateria dispatch m
               , listaDeMaterias dispatch m
               ]
-          , CV.main mockData
+          , CV.main $ toCalendar m
           ]
       ]
   )
@@ -110,7 +105,7 @@ listaDeMaterias dispatch model =
 
     warningsDiv :: ReactElement
     warningsDiv =
-      if isAnyWarningActive (log "warns" model.warnings) then
+      if isAnyWarningActive (spy "warns" model.warnings) then
         HS.ul "warnings-container"
           [ newMateriaWarning
           , renameToExistingMateriaNameWarning
@@ -168,7 +163,7 @@ vistaDeMateria dispatch m =
     , HS.button_ "btn-important" { onClick: dispatch <| NewClase }
         (HS.text "+ Nueva opción de clase para esta materia")
     , HS.div "flex-col-gap-10"
-        ( (log "materiaClases" focusedMateria.materiaClases)
+        ( (spy "materiaClases" focusedMateria.materiaClases)
             # Array.fromFoldable
             # map (\x -> vistaDeClase dispatch x m.dictClases)
         )
@@ -263,20 +258,20 @@ textInput dispatch x =
 
 strToTime :: String -> Maybe Time
 strToTime originalHourString = do
-  validTime <- parseTime $ log "originalHourString" originalHourString
-  if T.bottom <= (log "validTime" validTime) && validTime <= (T.top) then Just validTime
+  validTime <- parseTime $ spy "originalHourString" originalHourString
+  if T.bottom <= (spy "validTime" validTime) && validTime <= (T.top) then Just validTime
   else Nothing
   where
   parseTime :: String -> Maybe Time
   parseTime s = do
     h1 <- map (_ * 10) $ (CodePoints.codePointAt 0 s) >>= U.decDigitToInt
     h2 <- CodePoints.codePointAt 1 s >>= U.decDigitToInt
-    h <- log "hour" $ toEnum $ h1 + h2
-    c <- log "colon" $ CodePoints.codePointAt 2 s
-    log "guard" $ guard (c == (CodePoints.codePointFromChar ':'))
+    h <- spy "hour" $ toEnum $ h1 + h2
+    c <- spy "colon" $ CodePoints.codePointAt 2 s
+    spy "guard" $ guard (c == (CodePoints.codePointFromChar ':'))
     m1 <- map (_ * 10) $ CodePoints.codePointAt 3 s >>= U.decDigitToInt
     m2 <- CodePoints.codePointAt 4 s >>= U.decDigitToInt
-    m <- log "min" $ toEnum $ m1 + m2
+    m <- spy "min" $ toEnum $ m1 + m2
     pure $ Time.Time h m bottom bottom
 
 modifyDate :: { changeType :: TimeRangeChangeType, newStr :: String } -> HorarioClase (Maybe Time) -> HorarioClase (Maybe Time)
@@ -316,7 +311,7 @@ changeMateriaClaseIds oldId newId mat oldMapClases =
       newClase =
         ( case Map.lookup oldId oldMapClases of
             -- TODO
-            Nothing -> log ("the impossible happened: changeMateriaClaseIds oldId " <> oldId <> " newId " <> newId) $ emptyClase
+            Nothing -> spy ("the impossible happened: changeMateriaClaseIds oldId " <> oldId <> " newId " <> newId) $ emptyClase
             Just x -> x
         )
           # (_ { claseId = newId })
@@ -339,25 +334,25 @@ changeMateriaClaseIds oldId newId mat oldMapClases =
 update :: Model -> Msg -> Transition Msg Model
 update model msg =
   let
-    mym = log "model" model
-    mycal = log "cal" $ toCalendar model
+    mym = spy "model" model
+    mycal = spy "cal" $ toCalendar model
 
     getClase :: String -> Model -> Clase
     getClase idClase mm =
       case Map.lookup idClase mm.dictClases of
         -- TODO
-        Nothing -> log ("the impossible happened update: getClase: didn't find: idClase" <> idClase) $ emptyClase
+        Nothing -> spy ("the impossible happened update: getClase: didn't find: idClase" <> idClase) $ emptyClase
         Just y -> y
 
     getSesion :: Int -> Clase -> Sesion
     getSesion arrIndex c =
       case Array.index c.claseSesiones arrIndex of
         -- TODO
-        Nothing -> log ("the impossible happened update: getSesion: didn't find: arrIndex" <> show arrIndex) $ defaultSesion
+        Nothing -> spy ("the impossible happened update: getSesion: didn't find: arrIndex" <> show arrIndex) $ defaultSesion
         Just y -> y
     focusedMateria =
       -- TODO
-      Maybe.fromMaybe (log ("the impossible happened update: didn't find focusedMateria: " <> show model.focusedMateriaName) emptyMateria)
+      Maybe.fromMaybe (spy ("the impossible happened update: didn't find focusedMateria: " <> show model.focusedMateriaName) emptyMateria)
         (Map.lookup model.focusedMateriaName model.dictMaterias)
 
     dayUpdater :: { changeType :: TimeRangeChangeType, newStr :: String } -> (Materia -> HorarioClase (Maybe Time)) -> (HorarioClase (Maybe Time) -> Materia -> Materia) -> Model
@@ -425,7 +420,7 @@ update model msg =
           (newFocusedMateria /\ newMapClases) =
             case changeMateriaClaseIds oldClaseId newClaseId focusedMateria model.dictClases of
               -- TODO
-              Nothing -> log ("repeated claseId: " <> show oldClaseId) $ unsafeCoerce unit
+              Nothing -> spy ("repeated claseId: " <> show oldClaseId) $ unsafeCoerce unit
               Just y -> y
           newMapMaterias =
             Map.insert newFocusedMateria.materiaNombre newFocusedMateria model.dictMaterias
