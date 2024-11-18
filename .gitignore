@@ -1,12 +1,6 @@
 # Created by https://www.toptal.com/developers/gitignore/api/elm,node
 # Edit at https://www.toptal.com/developers/gitignore?templates=elm,node
 
-### Elm ###
-# elm-package generated files
-elm-stuff
-# elm-repl generated files
-repl-temp-*
-
 ### Node ###
 # Logs
 logs
