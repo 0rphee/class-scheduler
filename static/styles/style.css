@@ -6,6 +6,8 @@
   --accent: #443dff;
   --light-gray: rgba(0, 0, 0, 0.1);
   --input-bg: rgb(248, 249, 255);
+  --class-sesion-fg: rgb(91, 172, 116);
+  --class-sesion-bg: rgb(222, 244, 230);
 }
 
 html {
@@ -168,18 +170,37 @@ select {
   gap: 0.5rem;
 }
 
+/* CALENDAR */
 .calendar-container {
   border-radius: 2rem;
-  padding: 1rem
-    /* , "border": "solid" */
-}
-
-.sesion-hours-container {
+  padding: 1rem 1rem 1.5rem 1rem;
   display: flex;
+  gap: 1rem;
   flex-direction: column;
-  gap: 0.5rem;
 }
 
+.calendar-headers {
+  display: flex;
+}
+
+/* HEADER BUFFER */
+.calendar-headers>div:first-child {
+  min-width: 5%;
+}
+
+.calendar-headers>div:last-child {
+  display: flex;
+  justify-content: space-around;
+  flex-grow: 1;
+}
+
+.calendar-content {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+}
+
+/* TIME LABLES */
 .time-labels-container {
   display: flex;
   flex-direction: column;
@@ -201,6 +222,8 @@ select {
   width: 100%
 }
 
+
+/* WEEK COLUMNS */
 .week-column-container {
   display: flex;
   justify-content: space-evenly;
@@ -212,4 +235,36 @@ select {
   flex-grow: 1;
   border-left: 1px solid black;
   position: relative;
+}
+
+/* CLASS SESION */
+.class-sesion {
+  position: absolute;
+  width: 100%;
+}
+
+.class-sesion>div {
+  border-radius: 0 1em 1em 0;
+  background-color: var(--class-sesion-bg);
+  color: var(--class-sesion-fg);
+  display: flex;
+  flex-direction: column;
+  height: 98%;
+  width: 95%;
+  font-size: 0.8rem;
+
+  box-sizing: border-box;
+  border-left: 0.2rem solid var(--class-sesion-fg);
+  padding: 5%;
+}
+
+.class-sesion>div>h3 {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.class-sesion>div>div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

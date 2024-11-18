@@ -73,13 +73,10 @@ genHorarioClase ini fin = { inicio: toTup ini, final: toTup fin }
     ttime = durHours float
 
 emptyHorario :: HorarioClase (Maybe T.Time)
-emptyHorario =
-  { inicio: ("" /\ Nothing)
-  , final: ("" /\ Nothing)
-  }
+emptyHorario = { inicio: ("" /\ Nothing), final: ("" /\ Nothing) }
 
 mockData :: { materiaLunes :: Array { final :: String /\ TDU.Hours, inicio :: String /\ TDU.Hours } }
-mockData = { materiaLunes: [ genHorarioClase 7.0 8.0, genHorarioClase 8.5 10.0, genHorarioClase 10.0 12.0, genHorarioClase 17.5 20.0 ] }
+mockData = { materiaLunes: [ genHorarioClase 8.5 10.0, genHorarioClase 10.0 12.0, genHorarioClase 17.5 20.0, genHorarioClase 7.0 8.0 ] }
 
 generateHorizontalRows :: Number -> Number -> Array (ReactElement)
 generateHorizontalRows startF endF =
@@ -88,97 +85,46 @@ generateHorizontalRows startF endF =
     helper carry next =
       if next >= startF then
         helper
-          ( ( H.div {}
-                (H.text (formatDur $ durHours next))
-            ) `Array.cons` carry
+          ( (H.div {} (H.text (formatDur $ durHours next)))
+              `Array.cons`
+                carry
           )
           (next - 0.5)
       else
         carry
   in
-    helper
-      [ H.div
-          {}
-          (H.text (formatDur $ durHours endF))
-      ]
-      (endF - 0.5)
+    helper [] endF
 
 renderDay :: Array (String /\ HorarioClase TDU.Hours) -> Array (ReactElement)
-renderDay xs =
-  let
-    renderClass :: (String /\ HorarioClase TDU.Hours) -> ReactElement
-    renderClass (nameStr /\ { inicio, final }) =
-      let
-        start = (\x -> (*) 100.0 $ durRatio (durHours 24.0) x) (Tuple.snd inicio)
-        dif = (\x y -> (*) 100.0 $ durRatio (durHours 24.0) (durSub x y)) (Tuple.snd final) (Tuple.snd inicio)
-      in
-        H.div
-          { style: H.css
-              { "position": "absolute"
-              , "height": (show dif <> "%")
-              , "width": "100%"
-              , "top": (show start <> "%")
-              , boxSizing: "border-box"
-              }
-          }
-          [ H.div
-              { style: H.css
-                  { "borderRadius": "0 15px 15px 0"
-                  , "backgroundColor": "rgb(222, 244, 230)"
-                  , "color": "rgb(91, 172, 116)"
-                  , "display": "flex"
-                  , "height": "98%"
-                  , "width": "95%"
-                  , "fontSize": "0.8rem"
-                  }
-              }
-              [ H.div
-                  { style: H.css
-                      { "padding": "8%"
-                      , "maxWidth": "80%"
-                      , "borderLeft": "0.2rem solid rgb(91, 172, 116)"
-                      }
-                  }
-                  [ H.text nameStr
-                  , H.div
-                      { style: H.css
-                          { "overflow": "hidden"
-                          , "textOverflow": "ellipsis"
-                          , "whiteSpace": "nowrap"
-                          }
-                      }
-                      (H.text (Tuple.fst inicio <> " - " <> Tuple.fst final))
-                  ]
-              ]
+renderDay xs = map renderClass xs
+  where
+  renderClass :: (String /\ HorarioClase TDU.Hours) -> ReactElement
+  renderClass (nameStr /\ { inicio, final }) =
+    HS.div_ "class-sesion"
+      { style: H.css { "height": (show dif <> "%"), "top": (show start <> "%") }
+      }
+      ( H.div {}
+          [ H.h3 {} nameStr
+          , H.div {} (H.text (Tuple.fst inicio <> " - " <> Tuple.fst final))
+          , H.div {} (H.text "Profesor")
+          , H.div {} (H.text "Clase ID")
           ]
-  in
-    map renderClass xs
+      )
+    where
+    start = (\x -> (*) 100.0 $ durRatio (durHours 24.0) x) (Tuple.snd inicio)
+    dif = (\x y -> (*) 100.0 $ durRatio (durHours 24.0) (durSub x y)) (Tuple.snd final) (Tuple.snd inicio)
 
 main :: ReactElement
 main =
   HS.div "main-box-shadow calendar-container"
-    [ H.div
+    [ HS.div "calendar-headers"
         -- HEADER
-        { style: H.css { "display": "flex" } }
-        [ H.div { style: H.css { "minWidth": "5%" } } (H.text "") -- buffer
-        , H.div
-            { style: H.css
-                { "display": "flex"
-                , "justifyContent": "space-around"
-                , "flexGrow": "1"
-                }
-            }
+        [ H.div {} (H.text "") -- buffer
+        , H.div {}
             (map (\s -> H.div {} $ H.text s) [ "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM" ])
         ]
-    , H.div
-        -- WEEKLY VIEW
-        { style: H.css
-            { "display": "flex"
-            , "flexDirection": "row"
-            , "height": "100%"
-            , "padding": "6px 0 0 0"
-            }
-        }
+    , HS.div "calendar-content"
+        -- CALENDAR CONTENT
         [ HS.div "time-labels-container"
             -- TIME LABELS
             (generateHorizontalRows 0.0 24.0)
