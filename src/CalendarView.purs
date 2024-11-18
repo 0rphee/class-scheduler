@@ -1,4 +1,4 @@
-module Sh where
+module CalendarView where
 
 import Prelude
 
@@ -13,7 +13,8 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Elmish (ReactElement)
 import Elmish.HTML as H
 import Elmish.HTML.Styled as HS
-import Model (HorarioClase)
+import Model (CalendarModel, HorarioClase, CalendarSesionInfo, timeToHours)
+import Web.HTML.HTMLMediaElement (duration)
 
 durHours :: Number -> TDU.Hours
 durHours = TDU.Hours
@@ -33,8 +34,9 @@ formatDur (TDU.Hours h) = hs <> ":" <> ms
   ms = x <> Int.toStringAs Int.decimal minNum
     where
     x = if minNum < 10 then "0" else ""
+  -- TODO: check if there are better ways to deal with floats
   hourNum = Int.floor h
-  minNum = Int.floor $ (h - (Number.trunc h)) * 60.0
+  minNum = Int.round $ (h - (Number.trunc h)) * 60.0
 
 -- hours :: Number -> T.Time
 -- hours n = T.Time hour minu bottom bottom
@@ -65,18 +67,27 @@ formatDur (TDU.Hours h) = hs <> ":" <> ms
 --   (TDU.Hours yy) = T.diff bottom y
 --   numRes = xx - yy
 
-genHorarioClase :: Number -> Number -> HorarioClase TDU.Hours
-genHorarioClase ini fin = { inicio: toTup ini, final: toTup fin }
+genHorarioClase :: Number -> Number -> { inicio :: TDU.Hours, final :: TDU.Hours }
+genHorarioClase inicio final = { inicio: durHours inicio, final: durHours final }
+
+mockData :: CalendarModel
+mockData =
+  { lun:
+      helper <$>
+        [ genHorarioClase 8.5 10.0
+        , genHorarioClase 10.0 12.0
+        , genHorarioClase 17.5 20.0
+        , genHorarioClase 7.0 8.0
+        ]
+  , mar: helper <$> [ genHorarioClase 10.0 15.0 ]
+  , mie: helper <$> [ genHorarioClase 15.0 18.0 ]
+  , jue: helper <$> [ genHorarioClase 22.0 23.5 ]
+  , vie: helper <$> [ genHorarioClase 8.0 13.5 ]
+  , sab: helper <$> [ genHorarioClase 6.0 8.0 ]
+  , dom: helper <$> [ genHorarioClase 12.0 13.0 ]
+  }
   where
-  toTup float = (formatDur ttime /\ ttime)
-    where
-    ttime = durHours float
-
-emptyHorario :: HorarioClase (Maybe T.Time)
-emptyHorario = { inicio: ("" /\ Nothing), final: ("" /\ Nothing) }
-
-mockData :: { materiaLunes :: Array { final :: String /\ TDU.Hours, inicio :: String /\ TDU.Hours } }
-mockData = { materiaLunes: [ genHorarioClase 8.5 10.0, genHorarioClase 10.0 12.0, genHorarioClase 17.5 20.0, genHorarioClase 7.0 8.0 ] }
+  helper = (\{ inicio, final } -> { matNombre: "Cálculo", prof: "Bernabé", id: "12", inicio: inicio, final: final })
 
 generateHorizontalRows :: Number -> Number -> Array (ReactElement)
 generateHorizontalRows startF endF =
@@ -95,27 +106,27 @@ generateHorizontalRows startF endF =
   in
     helper [] endF
 
-renderDay :: Array (String /\ HorarioClase TDU.Hours) -> Array (ReactElement)
+renderDay :: Array CalendarSesionInfo -> Array (ReactElement)
 renderDay xs = map renderClass xs
   where
-  renderClass :: (String /\ HorarioClase TDU.Hours) -> ReactElement
-  renderClass (nameStr /\ { inicio, final }) =
+  renderClass :: CalendarSesionInfo -> ReactElement
+  renderClass c =
     HS.div_ "class-sesion"
       { style: H.css { "height": (show dif <> "%"), "top": (show start <> "%") }
       }
       ( H.div {}
-          [ H.h3 {} nameStr
-          , H.div {} (H.text (Tuple.fst inicio <> " - " <> Tuple.fst final))
-          , H.div {} (H.text "Profesor")
-          , H.div {} (H.text "Clase ID")
+          [ H.h3 {} c.matNombre
+          , H.div {} (H.text (formatDur c.inicio <> " - " <> formatDur c.final))
+          , H.div {} (H.text c.prof)
+          , H.div {} (H.text $ "ID: " <> c.id)
           ]
       )
     where
-    start = (\x -> (*) 100.0 $ durRatio (durHours 24.0) x) (Tuple.snd inicio)
-    dif = (\x y -> (*) 100.0 $ durRatio (durHours 24.0) (durSub x y)) (Tuple.snd final) (Tuple.snd inicio)
+    start = (\x -> (*) 100.0 $ durRatio (durHours 24.0) x) (c.inicio)
+    dif = (\x y -> (*) 100.0 $ durRatio (durHours 24.0) (durSub x y)) (c.final) (c.inicio)
 
-main :: ReactElement
-main =
+main :: CalendarModel -> ReactElement
+main calData =
   HS.div "main-box-shadow calendar-container"
     [ HS.div "calendar-headers"
         -- HEADER
@@ -130,10 +141,12 @@ main =
             (generateHorizontalRows 0.0 24.0)
         , HS.div "week-column-container"
             -- DAY COLUMNS
-            ( Array.replicate 7
-                ( HS.div "week-column"
-                    (renderDay (map (\x -> ("Cálculo" /\ x)) mockData.materiaLunes))
-                )
+            ( map
+                (\day -> HS.div "week-column" (renderDay day))
+                calDataArr
             )
         ]
     ]
+  where
+  calDataArr =
+    [ calData.lun, calData.mar, calData.mie, calData.jue, calData.vie, calData.sab, calData.dom ]

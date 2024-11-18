@@ -15,6 +15,7 @@
             "integers",
             "numbers",
             "prelude",
+            "transformers",
             "unicode"
           ],
           "build_plan": [

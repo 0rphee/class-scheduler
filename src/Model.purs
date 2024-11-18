@@ -1,17 +1,26 @@
 module Model where
 
-import Data.Time
+import Prelude
 
+import Control.Monad.RWS (modify)
+import Control.Monad.State as State
 import Data.Array as Array
-import Data.BooleanAlgebra ((||))
 import Data.Foldable as Foldable
+import Data.FoldableWithIndex (forWithIndex_)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Maybe as Maybe
 import Data.Set (Set)
 import Data.Set as Set
+import Data.Time (Time)
+import Data.Time as T
+import Data.Time.Duration as TDU
+import Data.Traversable (for_)
+import Data.Tuple as Tuple
 import Data.Tuple.Nested (type (/\), (/\))
+import Debug (spy)
+import Unsafe.Coerce (unsafeCoerce)
 
 -- MODEL
 
@@ -184,3 +193,69 @@ setModelWarnings warnings model =
 setModelMapClases :: Map String Clase -> Model -> Model
 setModelMapClases d m =
   m { dictClases = d }
+
+type CalendarSesionInfo =
+  { matNombre :: String
+  , prof :: String
+  , id :: String
+  , inicio :: TDU.Hours -- T.Time
+  , final :: TDU.Hours -- T.Time
+  }
+
+type CalendarModel =
+  { lun :: Array CalendarSesionInfo
+  , mar :: Array CalendarSesionInfo
+  , mie :: Array CalendarSesionInfo
+  , jue :: Array CalendarSesionInfo
+  , vie :: Array CalendarSesionInfo
+  , sab :: Array CalendarSesionInfo
+  , dom :: Array CalendarSesionInfo
+  }
+
+emptyCalendarModel :: CalendarModel
+emptyCalendarModel =
+  { lun: [], mar: [], mie: [], jue: [], vie: [], sab: [], dom: [] }
+
+timeToHours :: T.Time -> TDU.Hours
+timeToHours t = T.diff t bottom
+
+toCalendar :: Model -> CalendarModel
+toCalendar m = Tuple.snd $ State.runState helper emptyCalendarModel
+  where
+  helper :: State.State CalendarModel Unit
+  helper =
+    for_ m.dictMaterias $ \el -> do
+      let matName = spy "cal- matnom" el.materiaNombre
+      let matClasesIdArr = spy "cal- matclasesidarr" $ Array.fromFoldable el.materiaClases
+      for_ matClasesIdArr $ \claseId -> do
+        case Map.lookup claseId m.dictClases of
+          Nothing -> pure unit
+          Just clase -> do
+            let claseProf = spy "cal- claseprof" $ clase.claseProf
+            for_ (spy "cal-sesiones" clase.claseSesiones) $ \sesion -> do
+              let (getter /\ setter) = funDia sesion.dia
+              let { inicio: (_ /\ itime), final: (_ /\ ftime) } = spy "cal sesionhorario" $ sesion.sesionHorario
+              case spy "cal itime" itime /\ ftime of
+                (Just i /\ Just f) -> do
+                  let
+                    newSesionInfItem =
+                      { matNombre: matName
+                      , prof: claseProf
+                      , id: claseId
+                      , inicio: timeToHours i
+                      , final: timeToHours f
+                      }
+                  prevSt <- State.get
+                  let oldDia = getter prevSt
+                  let newDia = Array.snoc oldDia newSesionInfItem
+                  let newSt = setter newDia prevSt
+                  State.put $ newSt
+                _ -> pure unit
+  funDia d = case d of
+    Lunes -> _.lun /\ (\v -> _ { lun = v })
+    Martes -> _.mar /\ (\v -> _ { mar = v })
+    Miercoles -> _.mie /\ (\v -> _ { mie = v })
+    Jueves -> _.jue /\ (\v -> _ { jue = v })
+    Viernes -> _.vie /\ (\v -> _ { vie = v })
+    Sabado -> _.sab /\ (\v -> _ { sab = v })
+    Domingo -> _.dom /\ (\v -> _ { dom = v })

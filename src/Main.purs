@@ -2,6 +2,8 @@ module Main (main) where
 
 import Prelude
 
+import CalendarView (mockData)
+import CalendarView as CV
 import Control.Alternative (guard)
 import Data.Array as Array
 import Data.Bounded as T
@@ -28,9 +30,8 @@ import Elmish.Boot (defaultMain)
 import Elmish.HTML as H
 import Elmish.HTML.Events as E
 import Elmish.HTML.Styled as HS
-import Model (Clase, Day(..), HorarioClase, Materia, Model, Sesion, dayToString, defaultSesion, emptyClase, emptyMateria, emptyWarnings, isAnyWarningActive, setAlreadyExistingClaseName, setAlreadyExistingMateriaRename, setClaseSesionInd, setClaseSesiones, setEmptyNameWhenClickingNewMateria, setFocusedMateriaName, setGeneralError, setModelMapClaseInd, setModelMateria, setModelWarnings, setSesionDia, setSesionHorario, stringToDay)
+import Model (Clase, Day(..), HorarioClase, Materia, Model, Sesion, dayToString, defaultSesion, emptyClase, emptyMateria, emptyWarnings, isAnyWarningActive, setAlreadyExistingClaseName, setAlreadyExistingMateriaRename, setClaseSesionInd, setClaseSesiones, setEmptyNameWhenClickingNewMateria, setFocusedMateriaName, setGeneralError, setModelMapClaseInd, setModelMateria, setModelWarnings, setSesionDia, setSesionHorario, stringToDay, toCalendar)
 import Msg (Msg(..), TimeRangeChangeType(..))
-import Sh as Sh
 import Unsafe.Coerce (unsafeCoerce)
 
 log :: forall a. String -> a -> a
@@ -40,13 +41,13 @@ main :: Effect Unit
 main = defaultMain { def: { init, view, update }, elementId: "app" }
 
 init :: Transition Msg Model
-init = pure
-  -- log "init"
-  { focusedMateriaName: ""
-  , dictMaterias: Map.singleton "" emptyMateria
-  , dictClases: Map.empty
-  , warnings: emptyWarnings
-  }
+init = pure $
+  log "init"
+    { focusedMateriaName: ""
+    , dictMaterias: Map.singleton "" emptyMateria
+    , dictClases: Map.empty
+    , warnings: emptyWarnings
+    }
 
 view :: Model -> Dispatch Msg -> ReactElement
 view m dispatch =
@@ -57,17 +58,11 @@ view m dispatch =
               [ HS.span "h1-name" (HS.text "Class scheduler"), HS.span "h1-extra" (HS.text "Crea tus horarios") ]
           ]
       , HS.div "content"
-          [ H.div
-              { style: H.css
-                  { "display": "flex"
-                  , "flexDirection": "row"
-                  , "gap": "4%"
-                  }
-              }
+          [ H.div {}
               [ vistaDeMateria dispatch m
               , listaDeMaterias dispatch m
               ]
-          , Sh.main
+          , CV.main mockData
           ]
       ]
   )
@@ -268,20 +263,20 @@ textInput dispatch x =
 
 strToTime :: String -> Maybe Time
 strToTime originalHourString = do
-  validTime <- parseTime originalHourString
-  if T.bottom <= validTime && validTime <= (T.top) then Just validTime
+  validTime <- parseTime $ log "originalHourString" originalHourString
+  if T.bottom <= (log "validTime" validTime) && validTime <= (T.top) then Just validTime
   else Nothing
   where
   parseTime :: String -> Maybe Time
   parseTime s = do
     h1 <- map (_ * 10) $ (CodePoints.codePointAt 0 s) >>= U.decDigitToInt
     h2 <- CodePoints.codePointAt 1 s >>= U.decDigitToInt
-    h <- toEnum $ h1 + h2
-    c <- CodePoints.codePointAt 2 s
-    guard (c /= (CodePoints.codePointFromChar ':'))
+    h <- log "hour" $ toEnum $ h1 + h2
+    c <- log "colon" $ CodePoints.codePointAt 2 s
+    log "guard" $ guard (c == (CodePoints.codePointFromChar ':'))
     m1 <- map (_ * 10) $ CodePoints.codePointAt 3 s >>= U.decDigitToInt
     m2 <- CodePoints.codePointAt 4 s >>= U.decDigitToInt
-    m <- toEnum $ m1 + m2
+    m <- log "min" $ toEnum $ m1 + m2
     pure $ Time.Time h m bottom bottom
 
 modifyDate :: { changeType :: TimeRangeChangeType, newStr :: String } -> HorarioClase (Maybe Time) -> HorarioClase (Maybe Time)
@@ -321,8 +316,7 @@ changeMateriaClaseIds oldId newId mat oldMapClases =
       newClase =
         ( case Map.lookup oldId oldMapClases of
             -- TODO
-            -- todo "oldClase"
-            Nothing -> unsafeCoerce unit
+            Nothing -> log ("the impossible happened: changeMateriaClaseIds oldId " <> oldId <> " newId " <> newId) $ emptyClase
             Just x -> x
         )
           # (_ { claseId = newId })
@@ -346,26 +340,24 @@ update :: Model -> Msg -> Transition Msg Model
 update model msg =
   let
     mym = log "model" model
+    mycal = log "cal" $ toCalendar model
 
     getClase :: String -> Model -> Clase
     getClase idClase mm =
       case Map.lookup idClase mm.dictClases of
         -- TODO
-        -- Debug.todo "error!"
-        Nothing -> unsafeCoerce unit
+        Nothing -> log ("the impossible happened update: getClase: didn't find: idClase" <> idClase) $ emptyClase
         Just y -> y
 
     getSesion :: Int -> Clase -> Sesion
     getSesion arrIndex c =
       case Array.index c.claseSesiones arrIndex of
         -- TODO
-        -- Debug.todo "error!"
-        Nothing -> unsafeCoerce unit
+        Nothing -> log ("the impossible happened update: getSesion: didn't find: arrIndex" <> show arrIndex) $ defaultSesion
         Just y -> y
     focusedMateria =
       -- TODO
-      --(todo "didnt find focusedmateria")
-      Maybe.fromMaybe emptyMateria
+      Maybe.fromMaybe (log ("the impossible happened update: didn't find focusedMateria: " <> show model.focusedMateriaName) emptyMateria)
         (Map.lookup model.focusedMateriaName model.dictMaterias)
 
     dayUpdater :: { changeType :: TimeRangeChangeType, newStr :: String } -> (Materia -> HorarioClase (Maybe Time)) -> (HorarioClase (Maybe Time) -> Materia -> Materia) -> Model
@@ -433,8 +425,7 @@ update model msg =
           (newFocusedMateria /\ newMapClases) =
             case changeMateriaClaseIds oldClaseId newClaseId focusedMateria model.dictClases of
               -- TODO
-              -- todo "claseid repetido"
-              Nothing -> unsafeCoerce unit
+              Nothing -> log ("repeated claseId: " <> show oldClaseId) $ unsafeCoerce unit
               Just y -> y
           newMapMaterias =
             Map.insert newFocusedMateria.materiaNombre newFocusedMateria model.dictMaterias

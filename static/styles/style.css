@@ -88,6 +88,13 @@ label {
   gap: 2em;
 }
 
+/* CONTAINER OF VISTA DE MATERIA & LISTA DE MATERIAS */
+.content>div:first-child {
+  display: flex;
+  flex-direction: row;
+  gap: 4%;
+}
+
 .warnings-container {
   background-color: rgb(219 51 53 / 20%);
   padding: 0.8rem;
