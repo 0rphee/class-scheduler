@@ -2,11 +2,10 @@ module Model where
 
 import Prelude
 
-import Control.Monad.RWS (modify)
-import Control.Monad.State as State
+import Control.Monad.ST as ST
+import Control.Monad.ST.Ref as STRef
 import Data.Array as Array
 import Data.Foldable as Foldable
-import Data.FoldableWithIndex (forWithIndex_)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
@@ -17,6 +16,7 @@ import Data.Time (Time)
 import Data.Time as T
 import Data.Time.Duration as TDU
 import Data.Traversable (for_)
+import Data.Tuple as Tup
 import Data.Tuple as Tuple
 import Data.Tuple.Nested (type (/\), (/\))
 import Debug (spy)
@@ -29,6 +29,8 @@ type Model =
   , dictMaterias :: Map String Materia
   , dictClases :: Map String Clase
   , warnings :: Warnings
+  , arrHorarios :: Array CalendarModel
+  , focusedHorario :: Int -- 0 default
   }
 
 setFocusedMateriaName :: String -> Model -> Model
@@ -111,14 +113,14 @@ type Materia =
 type Clase =
   { claseId :: String
   , claseProf :: String
-  , claseSesiones :: Array Sesion
+  , claseSesiones :: Array ISesion
   }
 
-setClaseSesiones :: Array Sesion -> Clase -> Clase
+setClaseSesiones :: Array ISesion -> Clase -> Clase
 setClaseSesiones arr c =
   c { claseSesiones = arr }
 
-setClaseSesionInd :: Int -> Sesion -> Clase -> Clase
+setClaseSesionInd :: Int -> ISesion -> Clase -> Clase
 setClaseSesionInd i s c =
   c { claseSesiones = Array.updateAtIndices [ i /\ s ] c.claseSesiones }
 
@@ -126,18 +128,26 @@ setMateriaNombre :: String -> Materia -> Materia
 setMateriaNombre materiaNombre materia =
   materia { materiaNombre = materiaNombre }
 
-type Sesion =
-  { dia :: Day, sesionHorario :: HorarioClase (Maybe Time) }
+type ISesion = Sesion (Maybe Time)
+type VSesion = Sesion Time
+type Sesion (a :: Type) =
+  { dia :: Day, sesionHorario :: HorarioClase a }
 
-setSesionDia :: Day -> Sesion -> Sesion
+validISesion :: ISesion -> Maybe VSesion
+validISesion i = do
+  ini <- Tup.snd i.sesionHorario.inicio
+  fin <- Tup.snd i.sesionHorario.final
+  pure $ { dia: i.dia, sesionHorario: { inicio: (Tup.fst i.sesionHorario.inicio /\ ini), final: (Tup.fst i.sesionHorario.final /\ fin) } }
+
+setSesionDia :: Day -> ISesion -> ISesion
 setSesionDia d s =
   s { dia = d }
 
-setSesionHorario :: HorarioClase (Maybe Time) -> Sesion -> Sesion
+setSesionHorario :: HorarioClase (Maybe Time) -> ISesion -> ISesion
 setSesionHorario h s =
   s { sesionHorario = h }
 
-defaultSesion :: Sesion
+defaultSesion :: ISesion
 defaultSesion =
   { dia: Lunes, sesionHorario: { inicio: ("" /\ Nothing), final: ("" /\ Nothing) } }
 
@@ -177,6 +187,8 @@ data Day
   | Viernes
   | Sabado
   | Domingo
+
+derive instance Eq Day
 
 emptyMateria :: Materia
 emptyMateria =
@@ -220,22 +232,28 @@ timeToHours :: T.Time -> TDU.Hours
 timeToHours t = T.diff t bottom
 
 toCalendar :: Model -> CalendarModel
-toCalendar m = Tuple.snd $ State.runState helper emptyCalendarModel
+toCalendar m = ST.run
+  ( do
+      ref <- STRef.new emptyCalendarModel
+      helper ref
+      val <- STRef.read ref
+      pure val
+  )
   where
-  helper :: State.State CalendarModel Unit
-  helper =
+  helper :: forall s. STRef.STRef s CalendarModel -> ST.ST s Unit
+  helper ref =
     for_ m.dictMaterias $ \el -> do
-      let matName = spy "cal- matnom" el.materiaNombre
-      let matClasesIdArr = spy "cal- matclasesidarr" $ Array.fromFoldable el.materiaClases
+      let matName = {-spy "cal- matnom"-}  el.materiaNombre
+      let matClasesIdArr = {-spy "cal- matclasesidarr" $ -}  Array.fromFoldable el.materiaClases
       for_ matClasesIdArr $ \claseId -> do
         case Map.lookup claseId m.dictClases of
           Nothing -> pure unit
           Just clase -> do
-            let claseProf = spy "cal- claseprof" $ clase.claseProf
-            for_ (spy "cal-sesiones" clase.claseSesiones) $ \sesion -> do
+            let claseProf = {-spy "cal- claseprof" $-}  clase.claseProf
+            for_ ( {-spy "cal-sesiones"-} clase.claseSesiones) $ \sesion -> do
               let (getter /\ setter) = funDia sesion.dia
-              let { inicio: (_ /\ itime), final: (_ /\ ftime) } = spy "cal sesionhorario" $ sesion.sesionHorario
-              case spy "cal itime" itime /\ ftime of
+              let { inicio: (_ /\ itime), final: (_ /\ ftime) } = {-spy "cal sesionhorario" $-}  sesion.sesionHorario
+              case {-spy "cal itime"-} itime /\ ftime of
                 (Just i /\ Just f) -> do
                   let
                     newSesionInfItem =
@@ -245,11 +263,12 @@ toCalendar m = Tuple.snd $ State.runState helper emptyCalendarModel
                       , inicio: timeToHours i
                       , final: timeToHours f
                       }
-                  prevSt <- State.get
+                  prevSt <- STRef.read ref
                   let oldDia = getter prevSt
                   let newDia = Array.snoc oldDia newSesionInfItem
                   let newSt = setter newDia prevSt
-                  State.put $ newSt
+                  _ <- STRef.write newSt ref
+                  pure unit
                 _ -> pure unit
   funDia d = case d of
     Lunes -> _.lun /\ (\v -> _ { lun = v })
@@ -259,3 +278,37 @@ toCalendar m = Tuple.snd $ State.runState helper emptyCalendarModel
     Viernes -> _.vie /\ (\v -> _ { vie = v })
     Sabado -> _.sab /\ (\v -> _ { sab = v })
     Domingo -> _.dom /\ (\v -> _ { dom = v })
+
+emptyModel :: Model
+emptyModel =
+  { focusedMateriaName: ""
+  , dictMaterias: Map.singleton "" emptyMateria
+  , dictClases: Map.empty
+  , warnings: emptyWarnings
+  , arrHorarios: []
+  , focusedHorario: 0
+  }
+
+testModel :: Model
+testModel =
+  { focusedMateriaName: "calculo"
+  , dictMaterias: Map.fromFoldable
+      [ "calculo" /\ { materiaNombre: "calculo", materiaClases: Set.fromFoldable [ "123", "321" ] } ]
+  , dictClases: Map.fromFoldable
+      [ "123" /\
+          { claseId: "123"
+          , claseProf: "rob"
+          , claseSesiones:
+              [ { dia: Lunes, sesionHorario: { inicio: "" /\ Nothing, final: "" /\ Nothing } } ]
+          }
+      , "321" /\
+          { claseId: "321"
+          , claseProf: "pedro"
+          , claseSesiones: [ { dia: Lunes, sesionHorario: { inicio: "" /\ Nothing, final: "" /\ Nothing } } ]
+          }
+      ]
+  , warnings: emptyWarnings
+  , arrHorarios: []
+  , focusedHorario: 0
+  }
+

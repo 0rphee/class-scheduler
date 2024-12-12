@@ -37,6 +37,11 @@ button.btn-important {
   font-weight: bold;
 }
 
+button.btn-mat-select {
+  font-weight: lighter;
+  background-color: var(--accent)
+}
+
 input {
   border-radius: 0.5rem;
   border-width: 0;
@@ -109,7 +114,7 @@ label {
 }
 
 .label-light-span {
-  font-weight: lighter;
+  font-weight: bold;
   font-size: 11pt;
 }
 
@@ -147,8 +152,23 @@ select {
   min-width: 20%;
 }
 
+.lista-materias>span {
+  font-weight: bold;
+}
+
+.lista-materias>div:last-child {
+  border-radius: 15px;
+  gap: 1em;
+  display: flex;
+  flex-direction: column;
+}
+
 .vista-materia {
   width: 100%;
+}
+
+.vista-materia>label>span {
+  font-weight: bold;
 }
 
 .flex-col-gap-05,
@@ -177,10 +197,16 @@ select {
   gap: 0.5rem;
 }
 
+.vista-sesion:not(:last-child) {
+  padding-bottom: 1rem;
+  border-bottom: 1px var(--primary) solid;
+}
+
 /* CALENDAR */
 .calendar-container {
   border-radius: 2rem;
   padding: 1rem 1rem 1.5rem 1rem;
+  align-self: stretch;
   display: flex;
   gap: 1rem;
   flex-direction: column;
@@ -263,6 +289,13 @@ select {
   box-sizing: border-box;
   border-left: 0.2rem solid var(--class-sesion-fg);
   padding: 5%;
+  overflow: scroll;
+  box-shadow: 1px 1px 3px 1px var(--class-sesion-fg);
+  position: relative;
+}
+
+.class-sesion>div:hover {
+  z-index: 100;
 }
 
 .class-sesion>div>h3 {
@@ -271,7 +304,40 @@ select {
 }
 
 .class-sesion>div>div {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cal-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.horario-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.horario-selector>div:last-child {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 2rem;
+}
+
+button.btn-round {
+  font-size: 0.8rem;
+  font-weight: bold;
+  height: 3rem;
+  width: 3rem;
+  display: block;
+  border-radius: 50%;
+}
+
+btn-horario-selected {
+  background-color: black;
 }

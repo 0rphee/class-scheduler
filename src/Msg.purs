@@ -18,3 +18,5 @@ data Msg
   | NewSesion { idClase :: String }
   | UpdateSesionTime { idClase :: String, indexSesion :: Int, changeType :: TimeRangeChangeType, newStr :: String }
   | UpdateSesionDay { idClase :: String, indexSesion :: Int, newDay :: Day }
+  | ValidateHorarios -- TODO
+  | SelectHorario Int

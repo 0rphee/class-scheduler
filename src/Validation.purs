@@ -4,146 +4,93 @@ module Validation {-(collectValidationResults, runProgLogic)-} where
 -- import Control.Monad (when)
 -- import Data.Bifunctor (Bifunctor (first))
 -- import Data.List (foldl', tails)
--- import Data.Map.Strict as M
--- import Data.Text qualified as T
--- import Data.Yaml
--- import PPrint
--- import Prettyprinter
--- import Prettyprinter.Render.Terminal (renderIO)
--- import System.Console.Terminal.Size
--- import System.IO (stdout)
--- import Types
--- import WriteXlsx (saveExcel)
--- import WriteiCal (saveMultipleICals)
 
 import Prelude
 
-import Data.Time.Duration as TDU
+import Data.Either (Either(..))
+import Data.List (List(..), (:))
+import Data.List as L
+import Data.Map as M
+import Data.Maybe as May
+import Data.Traversable (sequence)
+import Data.Tuple.Nested (type (/\), (/\))
+import Model (Clase, Materia, VSesion, validISesion)
+import Unsafe.Coerce (unsafeCoerce)
 
-type Interval = { inicio :: TDU.Hours, final :: TDU.Hours }
-
-intervalsOverlap :: Interval -> Interval -> Boolean
-intervalsOverlap { inicio: a, final: b } { inicio: x, final: y }
-  | a == x && b == y = true
-  | a < x && x < b = true
-  | a < y && y < b = true
-  | x < a && a < y = true
-  | x < b && b < y = true
+intervalsOverlap :: VSesion -> VSesion -> Boolean
+intervalsOverlap { dia: d1, sesionHorario: { inicio: _ /\ a, final: _ /\ b } } { dia: d2, sesionHorario: { inicio: _ /\ x, final: _ /\ y } }
+  | d1 /= d2 = false
+  | (a == x) && (b == y) = true
+  | (a < x) && (x < b) = true
+  | (a < y) && (y < b) = true
+  | (x < a) && (a < y) = true
+  | (x < b) && (b < y) = true
   | otherwise = false
 
--- classesOverlap :: Class -> Class -> Bool
--- classesOverlap class1 class2 =
---   case (class1, class2) of
---     (MondayClass inter1, MondayClass inter2) -> intervalsOverlap inter1 inter2
---     (TuesdayClass inter1, TuesdayClass inter2) -> intervalsOverlap inter1 inter2
---     (WednesdayClass inter1, WednesdayClass inter2) -> intervalsOverlap inter1 inter2
---     (ThursdayClass inter1, ThursdayClass inter2) -> intervalsOverlap inter1 inter2
---     (FridayClass inter1, FridayClass inter2) -> intervalsOverlap inter1 inter2
---     (SaturdayClass inter1, SaturdayClass inter2) -> intervalsOverlap inter1 inter2
---     _ -> False
+genPossibleClassCombinations
+  :: M.Map
+       String -- Materia: "Calculus"
+       (List String) -- Clases: "[Calculus w/Roberts (id: 1234), Calculus w/Nicholson (id: 4321)]"
+  -> List (List String) -- outputs the list of lists of ids as Text: [["1234", "9532"], ["4321", "9532"]]
+genPossibleClassCombinations = sequence <<< M.values
 
--- getMapsFromValues
---   :: [IDandSubj] -> Either Error (M.Map T.Text [T.Text], M.Map T.Text Subject)
--- getMapsFromValues values = go values (Right (M.empty, M.empty))
---   where
---     go
---       :: [IDandSubj]
---       -> Either Error (M.Map T.Text [T.Text], M.Map T.Text Subject)
---       -> Either Error (M.Map T.Text [T.Text], M.Map T.Text Subject)
---     go [] result = result
---     go (IDandSubj (id', subj) : xs) res =
---       do
---         (keyMap, valMap) <- res
---         case M.lookup id' valMap of
---           Just repeatedSubj -> Left $ RepeatedSubjId id' subj repeatedSubj
---           Nothing -> go xs (Right (M.alter alteringFunc sName keyMap, M.insert id' subj valMap))
---       where
---         (MkSubject sName _ _) = subj
---         alteringFunc :: Maybe [T.Text] -> Maybe [T.Text]
---         alteringFunc (Just valueInside) = Just (id' : valueInside)
---         alteringFunc Nothing = Just [id']
+-- ex = M.fromFoldable $ [ "Calc" /\ L.fromFoldable [ "123", "4321" ], "Quim" /\ L.fromFoldable [ "5421", "5945" ] ]
+-- res = genPossibleClassCombinations ex
 
--- genPossibleClassCombinations
---   :: Applicative f
---   => M.Map T.Text (f T.Text)
---   -> f [T.Text] -- outpts the list of lists of ids as Text
--- genPossibleClassCombinations = sequenceA . M.elems
+validate
+  :: M.Map
+       String -- Materia: "Calculus"
+       Materia
+  -- (List String) -- Clases: "[Calculus w/Roberts (id: 1234), Calculus w/Nicholson (id: 4321)]"
+  -> M.Map
+       String -- Clase id: "1234"
+       Clase -- Array (Sesion: dia, hora inicia, hora final )
+  -> Either String (List (List String))
+validate subjMap classMap =
+  if L.null validClassCombinations then Left "err"
+  else Right validClassCombinations
+  where
+  subjMap2 = map (\v -> L.fromFoldable v.materiaClases) subjMap
 
--- tuples :: Int -> [a] -> [[a]]
--- tuples =
---   let go r =
---         case compare r 0 of
---           LT -> const []
---           EQ -> const [[]]
---           GT -> concatMap (\(y : ys) -> map (y :) (go (r - 1) ys)) . init . tails
---    in go
+  classCombinations = genPossibleClassCombinations subjMap2
+  validClassCombinations = L.filter classCombIsValid classCombinations
 
--- validate :: M.Map T.Text Subject -> [[T.Text]] -> ([Error], [[IDandSubj]]) -- (errors, and successes)
--- validate allSubjectsMp = foldl' foldingF ([], [])
---   where
---     validateSubj :: [T.Text] -> Maybe Error
---     validateSubj combinations = validateClasses' asClasses -- combinations: ["1243", "1445", ..]
---       where
---         asClasses =
---           mconcat $
---             fmap
---               (\txtId -> (txtId,) <$> subjclasses (allSubjectsMp M.! txtId))
---               combinations
+  classCombIsValid :: List String -> Boolean
+  classCombIsValid classComb = not $ L.any (\(a /\ b) -> intervalsOverlap a b) pairs
+    where
+    asClase :: List Clase
+    asClase = L.mapMaybe (\id -> M.lookup id classMap) classComb
 
---         validateClasses' :: [(T.Text, Class)] -> Maybe Error
---         validateClasses' allClasses = foldl' f Nothing pairCombinations
---           where
---             pairCombinations = toTup <$> tuples 2 allClasses
---             toTup xs = case xs of
---               [c1, c2] -> (c1, c2)
---               _ ->
---                 error "This should never happen (list of more than 2 elements for combinations)" -- see `tuples` function
---             f :: Maybe Error -> ((T.Text, Class), (T.Text, Class)) -> Maybe Error
---             f Nothing ((id1, c1), (id2, c2)) =
---               if classesOverlap c1 c2
---                 then
---                   Just $
---                     OverlappingClasses (allSubjectsMp M.! id1, c1) (allSubjectsMp M.! id2, c2)
---                 else Nothing
---             f err _ = err
+    allSesiones :: List VSesion
+    allSesiones = L.concatMap (L.mapMaybe validISesion <<< L.fromFoldable <<< _.claseSesiones) asClase
 
---     foldingF :: ([Error], [[IDandSubj]]) -> [T.Text] -> ([Error], [[IDandSubj]])
---     foldingF (errs, validSchedules) xs =
---       case validateSubj xs of
---         Just err -> (err : errs, validSchedules)
---         Nothing ->
---           let validCombination = fmap (\txtid -> IDandSubj (txtid, allSubjectsMp M.! txtid)) xs
---            in (errs, validCombination : validSchedules)
+    pairs :: List (VSesion /\ VSesion)
+    pairs = tuples allSesiones
 
--- collectValidationResults :: [IDandSubj] -> Either [Error] [[IDandSubj]]
--- collectValidationResults xs = do
---   (!materias, !db) <- first (: []) $ getMapsFromValues xs
---   let allSubjectCombinations = genPossibleClassCombinations materias
---   let validationResults = validate db allSubjectCombinations
---   case validationResults of
---     (!errorList, []) -> Left errorList
---     (_, !successes) -> pure successes
+-- | Generate all choices of n elements out of the list x respecting the order in x and without repetitions.
+tuples :: forall a. List a -> List (a /\ a)
+tuples =
+  let
+    go r =
+      case compare r 0 of
+        LT -> const Nil
+        EQ -> const (L.singleton Nil)
+        GT ->
+          L.concatMap
+            ( \a -> case a of
+                (y : ys) -> map (y : _) (go (r - 1) ys)
+                _ -> unsafeCoerce unit
+            )
+            <<< May.fromMaybe (unsafeCoerce unit)
+            <<< L.init
+            <<< tails
 
--- runProgLogic :: Options -> IO ()
--- runProgLogic = \case
---   PrintExampleYaml lang -> printYaml lang
---   NormalOptions yamlSource prettyPrintToStdout outputFilePath writeICals -> do
---     res <- decodeFileEither yamlSource -- "test-english.yaml"
---     sz <-
---       size >>= \case
---         Nothing -> pure 80
---         Just (Window _ w) -> pure w
-
---     let layout = LayoutOptions (AvailablePerLine sz 1)
---         prettyRender a = renderIO stdout $ layoutSmart layout a
-
---     case res of
---       Left err -> putStrLn $ prettyPrintParseException err -- yaml parsing errors
---       Right result -> case collectValidationResults result of
---         Left errs -> prettyRender (annotateErrors errs) -- validation errors
---         Right lists -> do
---           when prettyPrintToStdout $ prettyRender (annotateSubjectLists lists)
-
---           when writeICals $ saveMultipleICals lists
-
---           saveExcel lists outputFilePath
+    tails Nil = L.singleton Nil
+    tails as'@(Cons _ as) = as' : tails as
+  in
+    map
+      ( \a -> case a of
+          (x : y : Nil) -> x /\ y
+          _ -> unsafeCoerce unit
+      )
+      <<< go 2

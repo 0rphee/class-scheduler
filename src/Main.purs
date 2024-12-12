@@ -4,6 +4,8 @@ import Prelude
 
 import CalendarView as CV
 import Control.Alternative (guard)
+import Data.Array (length)
+import Data.Array as A
 import Data.Array as Array
 import Data.Bounded as T
 import Data.CodePoint.Unicode as U
@@ -28,21 +30,19 @@ import Elmish.Boot (defaultMain)
 import Elmish.HTML as H
 import Elmish.HTML.Events as E
 import Elmish.HTML.Styled as HS
-import Model (Clase, Day(..), HorarioClase, Materia, Model, Sesion, dayToString, defaultSesion, emptyClase, emptyMateria, emptyWarnings, isAnyWarningActive, setAlreadyExistingClaseName, setAlreadyExistingMateriaRename, setClaseSesionInd, setClaseSesiones, setEmptyNameWhenClickingNewMateria, setFocusedMateriaName, setGeneralError, setModelMapClaseInd, setModelMateria, setModelWarnings, setSesionDia, setSesionHorario, stringToDay, toCalendar)
+import Model (Clase, Day(..), HorarioClase, ISesion, Materia, Model, Sesion, Warnings, CalendarModel, dayToString, defaultSesion, emptyClase, emptyMateria, emptyWarnings, isAnyWarningActive, setAlreadyExistingClaseName, setAlreadyExistingMateriaRename, setClaseSesionInd, setClaseSesiones, setEmptyNameWhenClickingNewMateria, setFocusedMateriaName, setGeneralError, setModelMapClaseInd, setModelMateria, setModelWarnings, setSesionDia, setSesionHorario, stringToDay, testModel, toCalendar)
 import Msg (Msg(..), TimeRangeChangeType(..))
 import Unsafe.Coerce (unsafeCoerce)
+import Validation (validate)
 
 main :: Effect Unit
 main = defaultMain { def: { init, view, update }, elementId: "app" }
 
 init :: Transition Msg Model
-init = pure $
-  spy "init"
-    { focusedMateriaName: ""
-    , dictMaterias: Map.singleton "" emptyMateria
-    , dictClases: Map.empty
-    , warnings: emptyWarnings
-    }
+init = pure
+  $ spy "init"
+      -- emptyModel
+      testModel
 
 view :: Model -> Dispatch Msg -> ReactElement
 view m dispatch =
@@ -57,98 +57,106 @@ view m dispatch =
               [ vistaDeMateria dispatch m
               , listaDeMaterias dispatch m
               ]
-          , CV.main $ toCalendar m
+          , HS.div "cal-container"
+              [ listaHorarios dispatch (A.length m.arrHorarios)
+              , CV.main $ toCalendar m
+              ]
+
           ]
       ]
   )
 
+listaHorarios :: Dispatch Msg -> Int -> ReactElement
+listaHorarios dispatch arrCalLength =
+  let
+    botonValidar =
+      HS.button_ "btn-important"
+        { onClick: dispatch <| ValidateHorarios }
+        (HS.text "Validar y generar horarios")
+    botonHorarioSinValidar = HS.button_ "btn-round" { onClick: dispatch <| SelectHorario 0 } (HS.text "⏺")
+    botonIndice ix = HS.button_ "btn-round" { onClick: dispatch <| SelectHorario ix } (HS.text $ show ix)
+  in
+    HS.div "horario-selector"
+      [ HS.span "label-light-span" (HS.text "Horarios")
+      , botonValidar
+      , HS.div
+          "main-box-shadow"
+          (botonHorarioSinValidar `Array.cons` (botonIndice <$> Array.range 1 10))
+      ]
+
+warningsEl :: Warnings -> ReactElement
+warningsEl w =
+  if isAnyWarningActive w then
+    HS.ul "warnings-container"
+      [ newMateriaWarning
+      , renameToExistingMateriaNameWarning
+      , alreadyExistingClaseNameWarning
+      , generalErrorWarning
+      ]
+  else H.text ""
+  where
+  warnDivBuilder :: String -> ReactElement
+  warnDivBuilder s = HS.li "warning-li" (HS.text s)
+
+  newMateriaWarning :: ReactElement
+  newMateriaWarning =
+    if w.emptyNameWhenClickingNewMateria then
+      warnDivBuilder "Cambia el nombre de la materia actual antes de crear una nueva"
+    else HS.text ""
+
+  renameToExistingMateriaNameWarning :: ReactElement
+  renameToExistingMateriaNameWarning =
+    case w.alreadyExistingMateriaRename of
+      Just alreadyExistingName ->
+        warnDivBuilder $ "Ya existe una materia llamada '" <> alreadyExistingName <> "'"
+      Nothing -> HS.text ""
+
+  alreadyExistingClaseNameWarning :: ReactElement
+  alreadyExistingClaseNameWarning =
+    case w.alreadyExistingClaseName of
+      Just alreadyExistingClaseId ->
+        warnDivBuilder $ "Ya existe una clase con el ID '" <> id <> "'"
+        where
+        id = if String.null alreadyExistingClaseId then "<vacío>" else alreadyExistingClaseId
+      Nothing -> HS.text ""
+
+  generalErrorWarning :: ReactElement
+  generalErrorWarning =
+    case w.generalError of
+      Just errorMsg -> warnDivBuilder errorMsg
+      Nothing -> HS.text ""
+
 listaDeMaterias :: Dispatch Msg -> Model -> ReactElement
 listaDeMaterias dispatch model =
   let
+    botonNuevaMateria :: ReactElement
+    botonNuevaMateria =
+      HS.button_ "btn-important"
+        { onClick: dispatch <| NewMateria }
+        (HS.text "+ Nueva Materia")
+
+    botonSelectMateria :: String -> ReactElement
+    botonSelectMateria materiaNameStr =
+      HS.button_ "btn-mat-select"
+        { onClick: dispatch <| ListaMateriasSelectMateria materiaNameStr }
+        buttonContent
+      where
+      buttonContent =
+        if String.null materiaNameStr then HS.em "" (HS.text "Materia sin nombre")
+        else HS.text materiaNameStr
+
     botonesMaterias :: Array (ReactElement)
     botonesMaterias =
-      (\matName -> botonSelectMateria dispatch matName) <$>
+      (\matName -> botonSelectMateria matName) <$>
         (Array.fromFoldable $ Map.keys model.dictMaterias)
-
-    warningDivBuilder :: String -> ReactElement
-    warningDivBuilder s = HS.li "warning-li" (HS.text s)
-
-    newMateriaWarning :: ReactElement
-    newMateriaWarning =
-      if model.warnings.emptyNameWhenClickingNewMateria then
-        warningDivBuilder "Cambia el nombre de la materia actual antes de crear una nueva"
-      else HS.text ""
-
-    renameToExistingMateriaNameWarning :: ReactElement
-    renameToExistingMateriaNameWarning =
-      case model.warnings.alreadyExistingMateriaRename of
-        Just alreadyExistingName ->
-          warningDivBuilder $ "Ya existe una materia llamada '" <> alreadyExistingName <> "'"
-        Nothing -> HS.text ""
-
-    alreadyExistingClaseNameWarning :: ReactElement
-    alreadyExistingClaseNameWarning =
-      case model.warnings.alreadyExistingClaseName of
-        Just alreadyExistingClaseId ->
-          warningDivBuilder $ "Ya existe una clase con el ID'" <> id <> "'"
-          where
-          id =
-            if String.null alreadyExistingClaseId then "<vacío>"
-            else alreadyExistingClaseId
-        Nothing -> HS.text ""
-
-    generalErrorWarning :: ReactElement
-    generalErrorWarning =
-      case model.warnings.generalError of
-        Just errorMsg -> warningDivBuilder errorMsg
-        Nothing -> HS.text ""
-
-    warningsDiv :: ReactElement
-    warningsDiv =
-      if isAnyWarningActive (spy "warns" model.warnings) then
-        HS.ul "warnings-container"
-          [ newMateriaWarning
-          , renameToExistingMateriaNameWarning
-          , alreadyExistingClaseNameWarning
-          , generalErrorWarning
-          ]
-      else H.text ""
   in
     HS.div
       "lista-materias main-box-shadow"
-      [ H.span { style: H.css { "fontWeight": "bold" } } (HS.text "Materias")
-      , warningsDiv
-      , H.div
-          { style: H.css
-              { "borderRadius": "15px"
-              , "gap": "15px"
-              , "display": "flex"
-              , "flexDirection": "column"
-              }
-          }
-          (botonNuevaMateria dispatch `Array.cons` (Array.fromFoldable botonesMaterias))
+      [ H.span {} (HS.text "Materias")
+      , warningsEl model.warnings
+      , H.div {}
+          (botonNuevaMateria `Array.cons` (Array.fromFoldable botonesMaterias))
       ]
-
-botonNuevaMateria :: Dispatch Msg -> ReactElement
-botonNuevaMateria dispatch =
-  HS.button_ "btn-important"
-    { onClick: dispatch <| NewMateria }
-    (HS.text "+ Nueva Materia")
-
-botonSelectMateria :: Dispatch Msg -> String -> ReactElement
-botonSelectMateria dispatch materiaNameStr =
-  H.button
-    { onClick: dispatch <| ListaMateriasSelectMateria materiaNameStr
-    , style: H.css
-        { "fontWeight": "lighter"
-        , "backgroundColor": "var(--accent)"
-        }
-    }
-    buttonContent
-  where
-  buttonContent =
-    if String.null materiaNameStr then HS.em "" (HS.text "Materia sin nombre")
-    else HS.text materiaNameStr
 
 vistaDeMateria :: Dispatch Msg -> Model -> ReactElement
 vistaDeMateria dispatch m =
@@ -158,12 +166,12 @@ vistaDeMateria dispatch m =
         { onChange: FocusedMateriaNameUpdate
         , text: m.focusedMateriaName
         , placeholder: "nombre de materia"
-        , label: H.span { style: H.css { "fontWeight": "bold", "fontSize": "30" } } (HS.text "Materia")
+        , label: HS.span "label-light-span" (HS.text "Materia")
         }
     , HS.button_ "btn-important" { onClick: dispatch <| NewClase }
         (HS.text "+ Nueva opción de clase para esta materia")
     , HS.div "flex-col-gap-10"
-        ( (spy "materiaClases" focusedMateria.materiaClases)
+        ( focusedMateria.materiaClases
             # Array.fromFoldable
             # map (\x -> vistaDeClase dispatch x m.dictClases)
         )
@@ -197,34 +205,32 @@ vistaDeClase dispatch idClase dictClases =
   where
   clase = Maybe.fromMaybe emptyClase (Map.lookup idClase dictClases)
 
-vistaSesion :: Dispatch Msg -> String -> Int -> Sesion -> ReactElement
+vistaSesion :: Dispatch Msg -> String -> Int -> ISesion -> ReactElement
 vistaSesion dispatch idClase indexSesion sesion =
   let
     constrMsg ty newStr =
       UpdateSesionTime { idClase: idClase, indexSesion: indexSesion, changeType: ty, newStr: newStr }
-
-    materiaDayInput :: { onChange :: String -> Msg, text :: String, placeholder :: String, label :: ReactElement } -> ReactElement
     materiaDayInput x =
       H.label {}
         [ x.label
         , H.input { placeholder: x.placeholder, value: x.text, onChange: dispatch <| (x.onChange <<< E.inputText), maxLength: 5 }
         ]
-
-    inputHelper :: String -> Msg
     inputHelper dia =
       UpdateSesionDay { idClase: idClase, indexSesion: indexSesion, newDay: val }
       where
       val = Maybe.fromMaybe Lunes (stringToDay dia)
-
   in
     HS.div
       -- column
       "vista-sesion"
-      [ H.select
-          { value: dayToString sesion.dia
-          , onChange: dispatch <| (inputHelper <<< E.selectSelectedValue)
-          }
-          $ map (\day -> H.option {} (HS.text $ dayToString day)) [ Lunes, Martes, Miercoles, Jueves, Viernes, Sabado, Domingo ]
+      [ H.label {}
+          [ HS.span "label-light-span" (HS.text "Día")
+          , H.select
+              { value: dayToString sesion.dia
+              , onChange: dispatch <| (inputHelper <<< E.selectSelectedValue)
+              }
+              $ map (\day -> H.option {} (HS.text $ dayToString day)) [ Lunes, Martes, Miercoles, Jueves, Viernes, Sabado, Domingo ]
+          ]
       , HS.div_
           -- row
           "flex-col-gap-05"
@@ -258,20 +264,20 @@ textInput dispatch x =
 
 strToTime :: String -> Maybe Time
 strToTime originalHourString = do
-  validTime <- parseTime $ spy "originalHourString" originalHourString
-  if T.bottom <= (spy "validTime" validTime) && validTime <= (T.top) then Just validTime
+  validTime <- parseTime originalHourString
+  if T.bottom <= validTime && validTime <= (T.top) then Just validTime
   else Nothing
   where
   parseTime :: String -> Maybe Time
   parseTime s = do
     h1 <- map (_ * 10) $ (CodePoints.codePointAt 0 s) >>= U.decDigitToInt
     h2 <- CodePoints.codePointAt 1 s >>= U.decDigitToInt
-    h <- spy "hour" $ toEnum $ h1 + h2
-    c <- spy "colon" $ CodePoints.codePointAt 2 s
-    spy "guard" $ guard (c == (CodePoints.codePointFromChar ':'))
+    h <- toEnum $ h1 + h2
+    c <- CodePoints.codePointAt 2 s
+    guard (c == (CodePoints.codePointFromChar ':'))
     m1 <- map (_ * 10) $ CodePoints.codePointAt 3 s >>= U.decDigitToInt
     m2 <- CodePoints.codePointAt 4 s >>= U.decDigitToInt
-    m <- spy "min" $ toEnum $ m1 + m2
+    m <- toEnum $ m1 + m2
     pure $ Time.Time h m bottom bottom
 
 modifyDate :: { changeType :: TimeRangeChangeType, newStr :: String } -> HorarioClase (Maybe Time) -> HorarioClase (Maybe Time)
@@ -336,6 +342,7 @@ update model msg =
   let
     mym = spy "model" model
     mycal = spy "cal" $ toCalendar model
+    validity = spy "validation res" $ show $ validate model.dictMaterias model.dictClases
 
     getClase :: String -> Model -> Clase
     getClase idClase mm =
@@ -344,7 +351,7 @@ update model msg =
         Nothing -> spy ("the impossible happened update: getClase: didn't find: idClase" <> idClase) $ emptyClase
         Just y -> y
 
-    getSesion :: Int -> Clase -> Sesion
+    getSesion :: Int -> Clase -> ISesion
     getSesion arrIndex c =
       case Array.index c.claseSesiones arrIndex of
         -- TODO
@@ -366,11 +373,11 @@ update model msg =
     tryToAddNewMateria :: Model -> Model
     tryToAddNewMateria m =
       if not $ Map.member "" m.dictMaterias then
-        { focusedMateriaName: ""
-        , dictMaterias: Map.insert "" emptyMateria m.dictMaterias
-        , dictClases: m.dictClases
-        , warnings: m.warnings # setEmptyNameWhenClickingNewMateria false
-        }
+        m
+          { focusedMateriaName = ""
+          , dictMaterias = Map.insert "" emptyMateria m.dictMaterias
+          , warnings = m.warnings # setEmptyNameWhenClickingNewMateria false
+          }
       else m { warnings = m.warnings # setEmptyNameWhenClickingNewMateria true }
 
     tryToAddNewClase :: Model -> Model
@@ -426,7 +433,6 @@ update model msg =
             Map.insert newFocusedMateria.materiaNombre newFocusedMateria model.dictMaterias
 
         NewMateria -> tryToAddNewMateria model
-
         ListaMateriasSelectMateria newFocusedMateriaName ->
           model
             # setFocusedMateriaName newFocusedMateriaName
@@ -437,7 +443,6 @@ update model msg =
                 )
 
         NewClase -> tryToAddNewClase model
-
         NewSesion { idClase } ->
           model
             # setModelMapClaseInd newClase
@@ -469,4 +474,8 @@ update model msg =
             # setSesionHorario newTime
           newClase = clase
             # setClaseSesionInd indexSesion newSesion
+        ValidateHorarios ->
+          --TODO
+          model
+        SelectHorario ix -> model { focusedHorario = ix }
 
